@@ -5,11 +5,10 @@ import astropy.constants as const
 import numpy as np
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--z', required=True,
+parser.add_argument('--z',
                     help='redshift')
-parser.add_argument('--M500', required=True,
+parser.add_argument('--M500',
                     help='M500 in units of 10**14 Msun')
-
 args = parser.parse_args()
 
 z = args.z

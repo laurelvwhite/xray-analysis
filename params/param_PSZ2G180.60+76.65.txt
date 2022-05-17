@@ -1,7 +1,7 @@
-source_name = "PSZ2G021.10+33.24"
-obsids = "6104,7940"
-z = 0.151400
-R500 = 1331.756149120992
+source_name = "PSZ2G180.60+76.65"
+obsids = "538,11724"
+z = 0.213800
+R500 = 1213.9942951627952
 use_peak = True
 fixed_coord = None
 fast_annuli = True
