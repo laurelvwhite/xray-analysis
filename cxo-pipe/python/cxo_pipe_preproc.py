@@ -949,74 +949,31 @@ def bkg_region(res_dir, z, R500, Xdepro, Ydepro, multiobs, obsids):
         efile = mer_dir + "efile_repro_raw_clean_nopts.fits"
         for obsid in tab_obsid:
             if multiobs:
-                map_file = mer_dir + "wide_" + obsid + "_broad_thresh.img"
+                map_file = mer_dir + "All_" + obsid + "_reproj_evt.fits"
             else:
-                map_file = mer_dir + "wide_broad_thresh_nopts.img"
+                map_file = mer_dir + "efile_repro_raw_clean.fits"
 
-            hdu = fits.open(map_file)
-            cl_header = hdu[0].header
-
-            roll_angle = cl_header["ROLL_PNT"]
-
-            if roll_angle < 180.0:
-                start_angle = 360.0 - roll_angle
-            else:
-                start_angle = 180.0 + (360.0 - roll_angle)
-
-            d_a = cosmo.angular_diameter_distance(z).to("kpc").value
-            R500_pix = (
-                ((R500 / d_a) * u.rad).to("arcsec")
-                / (cl_header["CDELT2"] * 3600.0 / cl_header["CDELT2P"])
-            ).value
-            chip_width = (8.3 * u.arcmin).to("arcsec").value
-            chip_width_pix = chip_width / (
-                cl_header["CDELT2"] * 3600.0 / cl_header["CDELT2P"]
-            )
-
-            Xmid = (
-                cl_header["CRVAL1P"] + (cl_header["NAXIS1"] * cl_header["CDELT2P"]) / 2
-            )
-            Ymid = (
-                cl_header["CRVAL2P"] + (cl_header["NAXIS2"] * cl_header["CDELT2P"]) / 2
-            )
-            delta_depro_mid = np.sqrt((Xmid - Xdepro) ** 2 + (Ymid - Ydepro) ** 2)
-            delta2chip = delta_depro_mid * np.sin(
-                45.0 * np.pi / 180.0
-            )  # cluster is on the diagonal of a chip
-            outer_rad = delta2chip + chip_width_pix
-            inner_rad = 1.5 * R500_pix
-            if outer_rad < inner_rad:
-                inner_rad = (
-                    outer_rad
-                    - (
-                        (1.0 * u.arcmin).to("arcsec")
-                        / (cl_header["CDELT2"] * 3600.0 / cl_header["CDELT2P"])
-                    ).value
-                )
+            blanksky_file = mer_dir + "blank_sky_" + obsid + ".evt"
+            asol_file = mer_dir + "/All_" + obsid + ".asol"
+            sp.call(["bash", "shell/download_blank_sky.sh", map_file, blanksky_file, asol_file])
 
             reg_file_cl = mer_dir + "bkg_region_" + obsid + ".reg"
             file_bkg = open(reg_file_cl, "w")
             file_bkg.write("# Region file format: CIAO version 1.0\n")
             file_bkg.write(
-                "pie("
+                "circle("
                 + str(Xdepro)
                 + ","
                 + str(Ydepro)
                 + ","
-                + str(inner_rad)
-                + ","
-                + str(outer_rad)
-                + ","
-                + str(start_angle)
-                + ","
-                + str(start_angle + 90)
+                + str(R500)
                 + ")"
             )
             file_bkg.close()
 
-            efile_in = efile + "[bin sky=@" + reg_file_cl + "]"
+            blanksky_file_in = blanksky_file + "[bin sky=@" + reg_file_cl + "]"
             file_out = mer_dir + "bkg_stat_" + obsid + ".fits"
-            sp.call(["bash", "shell/extract_content.sh", efile_in, file_out])
+            sp.call(["bash", "shell/extract_content.sh", blanksky_file_in, file_out])
 
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -1124,16 +1081,21 @@ def find_SB_annuli(res_dir, Xdepro, Ydepro, bkg_area, z, R500, fast_annuli, obsi
                 ]
             )
 
-            # Estimate background count rate per unit area (in pixel**2)
+            # Get background count rate per unit area (in pixel**2) and exposure time for weighting
+            blanksky_file = mer_dir + "blank_sky_" + tab_obsid[0] + ".evt"
+            hdu = fits.open(blanksky_file)
+            bkg_header = hdu[0].header
+
             reg_file = mer_dir + "bkg_region_" + tab_obsid[0] + ".reg"
             bkg_count_file = mer_dir + "bkg_counts.txt"
             sp.call(
-                ["bash", "shell/counts_in_reg.sh", out_file, reg_file, bkg_count_file]
+                ["bash", "shell/counts_in_reg.sh", blanksky_file, reg_file, bkg_count_file]
             )
+
             with open(bkg_count_file) as f:
                 content = f.readlines()
             bkg_counts = float(content[5][9:-1])
-            bkg_count_rate = bkg_counts / cl_header["exposure"] / bkg_area[0]
+            bkg_count_rate = bkg_counts / bkg_header["exposure"] / bkg_area[0]
 
             # Loop to find annuli given S/N per annulus
             reg_file_name_i = mer_dir + "SB_annulus_i.reg"
@@ -1305,7 +1267,8 @@ def X_ray_SB_profile(res_dir, obsids, z):
         reg_file_cl = mer_dir + "SB_annuli.reg"
         reg_file_bkg = mer_dir + "bkg_region_" + tab_obsid[0] + ".reg"
         cl_file = efile + "[bin sky=@" + reg_file_cl + "][energy=700:2000]"
-        bkg_file = efile + "[bin sky=@" + reg_file_bkg + "][energy=700:2000]"
+        blanksky_file = mer_dir + "blank_sky_" + tab_obsid[0] + ".evt"
+        bkg_file = blanksky_file + "[bin sky=@" + reg_file_bkg + "][energy=700:2000]"
         out_file = mer_dir + "XSB_profile.fits"
         out_file_rmid = mer_dir + "XSB_profile_rmid.fits"
 

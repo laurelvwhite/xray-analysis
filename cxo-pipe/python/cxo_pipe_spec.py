@@ -138,16 +138,13 @@ def bkg_spectrum(res_dir, multiobs, obsids):
         tab_obsid = obsids.split(",")
         for obsid in tab_obsid:
             bkg_region_file = mer_dir + "bkg_region_" + obsid + ".reg"
-            if multiobs:
-                efile = mer_dir + "All_" + obsid + "_reproj_evt_nopts.fits"
-            else:
-                efile = mer_dir + "efile_repro_raw_clean_nopts.fits"
+            blanksky_file = mer_dir + "blank_sky_" + obsid + ".evt"
             out_file = bkg_dir + "bkg_spectrum_" + obsid
             sp.call(
                 [
                     "bash",
                     "shell/extract_spectrum.sh",
-                    efile,
+                    blanksky_file,
                     bkg_region_file,
                     bkg_stowed_file,
                     bkg_stowed_reg,
@@ -234,13 +231,16 @@ def find_spec_annuli(
 
         # Estimate background count rate per unit area (in pixel**2)
         tab_obsid = obsids.split(",")
+        blanksky_file = mer_dir + "blank_sky_" + tab_obsid[0] + ".evt"
+        hdu = fits.open(blanksky_file)
+        bkg_header = hdu[0].header
         reg_file = mer_dir + "bkg_region_" + tab_obsid[0] + ".reg"
         bkg_count_file = mer_dir + "bkg_counts.txt"
-        sp.call(["bash", "shell/counts_in_reg.sh", out_file, reg_file, bkg_count_file])
+        sp.call(["bash", "shell/counts_in_reg.sh", blanksky_file, reg_file, bkg_count_file])
         with open(bkg_count_file) as f:
             content = f.readlines()
         bkg_counts = float(content[5][9:-1])
-        bkg_count_rate = bkg_counts / cl_header["exposure"] / bkg_area[0]
+        bkg_count_rate = bkg_counts / bkg_header["exposure"] / bkg_area[0]
 
         if single_ann_spec:
             reg_file_name_i = cl_dir + "spec_annulus_1.reg"
