@@ -18,141 +18,6 @@ from sherpa.astro import ui
 cosmo = FlatLambdaCDM(70.0, 0.3, Tcmb0=2.7255)
 
 
-def find_stowed(res_dir):
-    """
-    Find stowed background associated with cluster and
-    background spectra given the CCD_ID used for pointing
-
-    Parameters
-    __________
-    res_dir: the result directory named after the cluster name
-
-    Returns
-    _______
-    Creates a stowed_files.txt file containing the paths to
-    the stowed background files to be used
-
-    """
-
-    mer_dir = res_dir + "/results/"
-
-    print(colored("Finding stowed background files...", "blue", None, ["bold"]))
-    print("------------------------------------------------------------")
-
-    if os.path.exists(mer_dir + "stowed_files.txt"):
-        print(colored("Stowed background files already found", "white", None, ["bold"]))
-        print("------------------------------------------------------------")
-    else:
-        efile = mer_dir + "efile_repro_raw_clean_nopts.fits"
-        hdu = fits.open(efile)
-        header = hdu[1].header
-        try:
-            ccd_id = header["CCD_ID"]
-        except:
-            ccd_id = int(header["DSVAL2"][0])
-
-        bkg_dir = os.environ["CXO_BKG_FILES"]
-        pipe_dir = os.environ["CXO_PIPE"]
-
-        if ccd_id == 0:
-            stowed_cl = bkg_dir + "acis0D2005-09-01bgstow_ctiN0002.fits"
-            reg_cl = pipe_dir + "tools/stowed_I0.reg"
-            stowed_bkg = bkg_dir + "acis3D2005-09-01bgstow_ctiN0002.fits"
-            reg_bkg = pipe_dir + "tools/stowed_I3.reg"
-        elif ccd_id == 1:
-            stowed_cl = bkg_dir + "acis1D2005-09-01bgstow_ctiN0002.fits"
-            reg_cl = pipe_dir + "tools/stowed_I1.reg"
-            stowed_bkg = bkg_dir + "acis2D2005-09-01bgstow_ctiN0002.fits"
-            reg_bkg = pipe_dir + "tools/stowed_I2.reg"
-        elif ccd_id == 2:
-            stowed_cl = bkg_dir + "acis2D2005-09-01bgstow_ctiN0002.fits"
-            reg_cl = pipe_dir + "tools/stowed_I2.reg"
-            stowed_bkg = bkg_dir + "acis1D2005-09-01bgstow_ctiN0002.fits"
-            reg_bkg = pipe_dir + "tools/stowed_I1.reg"
-        elif ccd_id == 3:
-            stowed_cl = bkg_dir + "acis3D2005-09-01bgstow_ctiN0002.fits"
-            reg_cl = pipe_dir + "tools/stowed_I3.reg"
-            stowed_bkg = bkg_dir + "acis0D2005-09-01bgstow_ctiN0002.fits"
-            reg_bkg = pipe_dir + "tools/stowed_I0.reg"
-        else:
-            print(
-                colored(
-                    "Observations are not made with ACIS-I!\n"
-                    + "--> This pipeline is not adapted",
-                    "red",
-                    None,
-                    ["bold"],
-                )
-            )
-            sys.exit()
-
-        stowed_files = open(mer_dir + "stowed_files.txt", "w")
-        stowed_files.write(stowed_cl + "\n")
-        stowed_files.write(reg_cl + "\n")
-        stowed_files.write(stowed_bkg + "\n")
-        stowed_files.write(reg_bkg)
-        stowed_files.close()
-
-
-def bkg_spectrum(res_dir, multiobs, obsids):
-    """
-    Extracts the background spectrum. If there are multiple
-    obsids of a single object: extracts the spectrum in
-    each event file
-
-    Parameters
-    __________
-    res_dir: the result directory named after the cluster name
-    multiobs: are there multiple obsids to consider? True/False
-    obsids: the list of obsids given as a comma-separated string of numbers
-
-    Returns
-    _______
-    Creates a *background* directory in the *results* folder of res_dir
-    containing the background spectrum / spectra
-
-    """
-
-    mer_dir = res_dir + "/results/"
-    bkg_dir = mer_dir + "background/"
-
-    if not os.path.exists(bkg_dir):
-        sp.call("mkdir " + bkg_dir, shell=True)
-
-    print(colored("Extracting background spectra...", "blue", None, ["bold"]))
-    print("------------------------------------------------------------")
-
-    specfiles = glob.glob(bkg_dir + "/*.pi")
-
-    if len(specfiles) > 0:
-        print(colored("Background spectra already extracted", "white", None, ["bold"]))
-        print("------------------------------------------------------------")
-    else:
-        stowed_files = mer_dir + "stowed_files.txt"
-        with open(stowed_files) as f:
-            content = f.readlines()
-
-        bkg_stowed_file = content[2][:-1]
-        bkg_stowed_reg = content[3]
-
-        tab_obsid = obsids.split(",")
-        for obsid in tab_obsid:
-            bkg_region_file = mer_dir + "bkg_region_" + obsid + ".reg"
-            blanksky_file = mer_dir + "blank_sky_" + obsid + ".evt"
-            out_file = bkg_dir + "bkg_spectrum_" + obsid
-            sp.call(
-                [
-                    "bash",
-                    "shell/extract_spectrum.sh",
-                    blanksky_file,
-                    bkg_region_file,
-                    bkg_stowed_file,
-                    bkg_stowed_reg,
-                    out_file,
-                ]
-            )
-
-
 def find_spec_annuli(
     res_dir, Xdepro, Ydepro, bkg_area, z, R500, single_ann_spec, obsids
 ):
@@ -387,12 +252,6 @@ def extract_cl_spectra(res_dir, multiobs, obsids):
         print(colored("Cluster spectra already extracted", "white", None, ["bold"]))
         print("------------------------------------------------------------")
     else:
-        stowed_files = mer_dir + "stowed_files.txt"
-        with open(stowed_files) as f:
-            content = f.readlines()
-        bkg_stowed_file = content[0][:-1]
-        bkg_stowed_reg = content[1][:-1]
-
         annuli_file = cl_dir + "spec_annuli.reg"
         with open(annuli_file) as f:
             content = f.readlines()
@@ -405,6 +264,11 @@ def extract_cl_spectra(res_dir, multiobs, obsids):
             else:
                 efile = mer_dir + "efile_repro_raw_clean_nopts.fits"
 
+            blanksky_file = mer_dir + "blank_sky_" + obsid + ".evt"
+            bkg_region_file = mer_dir + "bkg_region_" + obsid + ".reg"
+            with open(bkg_region_file) as f:
+                bkg_region = f.readlines()[0].strip('\n')
+
             for i in range(1, N_ann + 1):
                 cl_region_file = cl_dir + "spec_annulus_" + str(i) + ".reg"
                 out_file = cl_dir + "cl_spectrum_" + obsid + "_" + str(i)
@@ -414,8 +278,8 @@ def extract_cl_spectra(res_dir, multiobs, obsids):
                         "shell/extract_spectrum.sh",
                         efile,
                         cl_region_file,
-                        bkg_stowed_file,
-                        bkg_stowed_reg,
+                        blanksky_file,
+                        bkg_region,
                         out_file,
                     ]
                 )
