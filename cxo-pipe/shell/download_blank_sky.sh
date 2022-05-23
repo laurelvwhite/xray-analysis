@@ -7,5 +7,19 @@ punlearn blanksky
 pset blanksky evtfile=$mapfile
 pset blanksky outfile=$outfile
 pset blanksky asolfile=$asolfile
-pset blanksky clobber="yes"
-blanksky
+{
+  expect << EOD
+  set timeout -1
+  spawn blanksky clobber=yes
+  expect {
+    "Source file*" { 
+      send "\n" 
+      exp_continue 
+    }
+    "Output directory path*" { 
+      send "\n" 
+      exp_continue 
+    }
+  }
+EOD
+}
