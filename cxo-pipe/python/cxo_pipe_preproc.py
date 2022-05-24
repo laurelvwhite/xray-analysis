@@ -1219,14 +1219,7 @@ def vignetting_prof(res_dir, obsids):
 
             vignetting_prof[i - 1] = float(vign_cl[3][9:-1]) / expmax
 
-        tab_obsid = obsids.split(",")
-        regfile_bkg = mer_dir + "bkg_region_" + tab_obsid[0] + ".reg"
-        exp_in_bkg = mer_dir + "exp_in_bkg.txt"
-        sp.call(["bash", "shell/counts_in_reg.sh", expfile, regfile_bkg, exp_in_bkg])
-        with open(exp_in_bkg) as f:
-            content = f.readlines()
-
-        vignetting_bkg = float(content[3][9:-1]) / expmax
+        vignetting_bkg = 1
 
         saved_vign_prof = mer_dir + "vignetting_prof.npz"
         np.savez(saved_vign_prof, cl=vignetting_prof, bkg=vignetting_bkg)
