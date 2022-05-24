@@ -98,7 +98,7 @@ def find_spec_annuli(
         tab_obsid = obsids.split(",")
         blanksky_file = mer_dir + "blank_sky_" + tab_obsid[0] + ".evt"
         hdu = fits.open(blanksky_file)
-        bkg_header = hdu[0].header
+        bkg_header = hdu[1].header
         reg_file = mer_dir + "bkg_region_" + tab_obsid[0] + ".reg"
         bkg_count_file = mer_dir + "bkg_counts.txt"
         sp.call(["bash", "shell/counts_in_reg.sh", blanksky_file, reg_file, bkg_count_file])

@@ -9,10 +9,18 @@ pset blanksky outfile=$outfile
 pset blanksky asolfile=$asolfile
 {
   expect << EOD
-  set timeout 600
+  set timeout -1
   spawn blanksky clobber=yes
   expect {
-    "Source file*" { 
+    "Source event file*" { 
+      send "\n" 
+      exp_continue 
+    }
+    "Input event file*" { 
+      send "\n" 
+      exp_continue 
+    }
+    "Enter output file*" { 
       send "\n" 
       exp_continue 
     }

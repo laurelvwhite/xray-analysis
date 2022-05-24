@@ -55,10 +55,6 @@ prepro.X_ray_SB_profile(res_dir, obsids, z)
 print("------------------------------------------------------------")
 print(colored("Spectral analysis", "cyan", None, ["bold"]))
 print("------------------------------------------------------------")
-# Find the stowed background file given ACIS-I chip
-spec.find_stowed(res_dir)
-# Extract spectra in the background region for each obsid
-spec.bkg_spectrum(res_dir, multiobs, obsids)
 # Define the annuli to be used for cluster spectrum extraction
 N_ann = spec.find_spec_annuli(
     res_dir, Xdepro, Ydepro, bkg_area, z, R500, single_ann_spec, obsids
