@@ -139,7 +139,7 @@ def find_spec_annuli(
                 N_tot = 0
                 rad_add = 0.0
                 S2N = 0.0
-                while ((S2N < 30) | (N_tot < min_count)) & (rad_add < R500_pix):
+                while ((S2N < 20) | (N_tot < min_count)) & (rad_add < R500_pix): ## CHANGE BACK TO SNR THRESH 30 (?)
                     if inner_rad < 20.0:
                         rad_add += 1.0
                     else:
@@ -545,7 +545,6 @@ def fit_spec(res_dir, obsids, z):
             T_max = 100.0
 
             while (SNR_bin < 10) & (buff_T_err / buff_T == 1.0) | (T_max > 30.0):
-
                 ui.clean()
                 fit_ind = 1
                 for obsid in tab_obsid:
@@ -637,7 +636,6 @@ def fit_spec(res_dir, obsids, z):
 #                        )
 
                 ## My code                    
-                    ui.set_source(i, ui.xsphabs.abs1 * ui.xsapec.clus)
                    #ui.xsphabs.nH.nH = 0.07
                    #ui.freeze(ui.xsphabs.nH.nH)
                     ui.xsphabs.nH.nH = nH_val
