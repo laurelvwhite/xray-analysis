@@ -14,6 +14,7 @@ import warnings
 from tqdm import tqdm
 import scipy.optimize as optimization
 from sherpa.astro import ui
+from sherpa_contrib.utils import *
 
 cosmo = FlatLambdaCDM(70.0, 0.3, Tcmb0=2.7255)
 
@@ -588,51 +589,72 @@ def fit_spec(res_dir, obsids, z):
                 nH_val = float(np.load(mer_dir + "nH_value.npy"))
 
                 for i in range(1, fit_ind):
+#                    ui.xsphabs.nH.nH = nH_val
+#                    ui.thaw(ui.xsphabs.nH.nH)
+#                    #ui.freeze(ui.xsphabs.nH.nH)
+#                    ui.xsapec.kt.redshift = z
+#                    ui.thaw(ui.xsapec.kt.redshift)
+#                    #ui.freeze(ui.xsapec.kt.redshift)
+#                    ui.set_par(ui.xsapec.kt.Abundanc, 0.3, 0, 2)
+#                    ui.thaw(ui.xsapec.kt.Abundanc)
+#                    #ui.xsapec.kt.Abundanc = 0.3
+#                    #ui.freeze(ui.xsapec.kt.Abundanc)
+#                    #ui.xsapec.kt.kt = 12.0
+#                    ui.set_par(ui.xsapec.kt.kt, 4, 0.008, 100)
+#                    #ui.xsapec.kt.norm = 7e-4
+
+#                    ui.powlaw1d.p1.ref = 10
+#                    ui.powlaw1d.p1.gamma.min = -100
+#                    ui.powlaw1d.p1.gamma.max = 100
+#                    ui.powlaw1d.p1.gamma = 2
+#                    ui.powlaw1d.p1.ampl = 1e-2
+#                    ui.xsapec.ktb.redshift = 0.0
+#                    ui.freeze(ui.xsapec.ktb.redshift)
+#                    ui.xsapec.ktb.Abundanc = 1.0
+#                    ui.freeze(ui.xsapec.ktb.Abundanc)
+#                    ui.xsapec.ktb.kt = 0.18
+#                    ui.freeze(ui.xsapec.ktb.kt)
+#                    ui.xsapec.ktb.norm = 5e-2
+
+#                    tab_area_fact = tab_area_cl / tab_area_bkg[i]
+
+##                    if i % 2:
+#                    if True:
+#                        ui.set_source(
+#                            i,
+#                            ui.xsphabs.nH * ui.xsapec.kt
+#                            + tab_area_fact[ind_ann - 1]
+#                            * (
+#                                ui.const1d.a * ui.xsapec.ktb
+#                                + ui.const1d.b * ui.powlaw1d.p1
+#                            ),
+#                        )
+#                    else:
+#                        ui.set_source(
+#                            i,
+#                            ui.const1d.a * ui.xsapec.ktb
+#                            + ui.const1d.b * ui.powlaw1d.p1,
+#                        )
+
+                ## My code                    
+                    ui.set_source(i, ui.xsphabs.abs1 * ui.xsapec.clus)
+                   #ui.xsphabs.nH.nH = 0.07
+                   #ui.freeze(ui.xsphabs.nH.nH)
                     ui.xsphabs.nH.nH = nH_val
                     ui.thaw(ui.xsphabs.nH.nH)
-                    #ui.freeze(ui.xsphabs.nH.nH)
-                    ui.xsapec.kt.redshift = z
-                    ui.thaw(ui.xsapec.kt.redshift)
+                    #ui.xsapec.kt.redshift = z
                     #ui.freeze(ui.xsapec.kt.redshift)
+                    ui.set_par(ui.xsapec.kt.redshift, z, z-0.01, z+0.01)
+                    ui.thaw(ui.xsapec.kt.redshift)
                     ui.set_par(ui.xsapec.kt.Abundanc, 0.3, 0, 2)
                     ui.thaw(ui.xsapec.kt.Abundanc)
-                    #ui.xsapec.kt.Abundanc = 0.3
-                    #ui.freeze(ui.xsapec.kt.Abundanc)
-                    ui.xsapec.kt.kt = 12.0
-                    ui.xsapec.kt.norm = 7e-4
+                    ui.set_par(ui.xsapec.kt.kt, 4, 0.008, 100)
 
-                    ui.powlaw1d.p1.ref = 10
-                    ui.powlaw1d.p1.gamma.min = -100
-                    ui.powlaw1d.p1.gamma.max = 100
-                    ui.powlaw1d.p1.gamma = 2
-                    ui.powlaw1d.p1.ampl = 1e-2
-                    ui.xsapec.ktb.redshift = 0.0
-                    ui.freeze(ui.xsapec.ktb.redshift)
-                    ui.xsapec.ktb.Abundanc = 1.0
-                    ui.freeze(ui.xsapec.ktb.Abundanc)
-                    ui.xsapec.ktb.kt = 0.18
-                    ui.freeze(ui.xsapec.ktb.kt)
-                    ui.xsapec.ktb.norm = 5e-2
+                    ui.set_source(i, ui.xsphabs.nH * ui.xsapec.kt)
 
-                    tab_area_fact = tab_area_cl / tab_area_bkg[i]
+                renorm()
 
-#                    if i % 2:
-                    if True:
-                        ui.set_source(
-                            i,
-                            ui.xsphabs.nH * ui.xsapec.kt
-                            + tab_area_fact[ind_ann - 1]
-                            * (
-                                ui.const1d.a * ui.xsapec.ktb
-                                + ui.const1d.b * ui.powlaw1d.p1
-                            ),
-                        )
-                    else:
-                        ui.set_source(
-                            i,
-                            ui.const1d.a * ui.xsapec.ktb
-                            + ui.const1d.b * ui.powlaw1d.p1,
-                        )
+
 
                 ui.fit()
                 with warnings.catch_warnings():
