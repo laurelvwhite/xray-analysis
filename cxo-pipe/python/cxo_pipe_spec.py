@@ -266,8 +266,6 @@ def extract_cl_spectra(res_dir, multiobs, obsids):
 
             blanksky_file = mer_dir + "blank_sky_" + obsid + ".evt"
             bkg_region_file = mer_dir + "bkg_region_" + obsid + ".reg"
-            with open(bkg_region_file) as f:
-                bkg_region = f.readlines()[0].strip('\n')
 
             for i in range(1, N_ann + 1):
                 cl_region_file = cl_dir + "spec_annulus_" + str(i) + ".reg"
@@ -279,7 +277,7 @@ def extract_cl_spectra(res_dir, multiobs, obsids):
                         efile,
                         cl_region_file,
                         blanksky_file,
-                        bkg_region,
+                        bkg_region_file,
                         out_file,
                     ]
                 )
@@ -560,9 +558,9 @@ def fit_spec(res_dir, obsids, z):
                         cl_dir + "cl_spectrum_" + obsid + "_" + str(ind_ann) + ".pi",
                     )
                     fit_ind += 1
-                    tab_area_bkg.append(area_bkg)
-                    ui.load_data(fit_ind, bkg_dir + "bkg_spectrum_" + obsid + ".pi")
-                    fit_ind += 1
+#                    tab_area_bkg.append(area_bkg)
+#                    ui.load_data(fit_ind, bkg_dir + "bkg_spectrum_" + obsid + ".pi")
+#                    fit_ind += 1
 
                 for i in range(1, fit_ind):
                     full_spec = ui.get_data_plot(i)
@@ -575,7 +573,7 @@ def fit_spec(res_dir, obsids, z):
                         area_scale = ui.get_backscal(i)
                         bkg_scale = ui.get_bkg_scale(i)
                         ui.set_backscal(i, area_scale * newscale / bkg_scale)
-                    ui.subtract(i)
+#                    ui.subtract(i)
                     ui.group_snr(i, SNR_bin)
 
                 if (T_max != 100.0) & (T_max > 30.0):
@@ -583,18 +581,23 @@ def fit_spec(res_dir, obsids, z):
                 else:
                     ui.notice(0.7, 12)
 
-                ui.set_method("neldermead")
-                ui.set_stat("chi2gehrels")
+                #ui.set_method("neldermead")
+                #ui.set_stat("chi2gehrels")
+                ui.set_stat("wstat")
 
                 nH_val = float(np.load(mer_dir + "nH_value.npy"))
 
                 for i in range(1, fit_ind):
                     ui.xsphabs.nH.nH = nH_val
-                    ui.freeze(ui.xsphabs.nH.nH)
+                    ui.thaw(ui.xsphabs.nH.nH)
+                    #ui.freeze(ui.xsphabs.nH.nH)
                     ui.xsapec.kt.redshift = z
-                    ui.freeze(ui.xsapec.kt.redshift)
-                    ui.xsapec.kt.Abundanc = 0.3
-                    ui.freeze(ui.xsapec.kt.Abundanc)
+                    ui.thaw(ui.xsapec.kt.redshift)
+                    #ui.freeze(ui.xsapec.kt.redshift)
+                    ui.set_par(ui.xsapec.kt.Abundanc, 0.3, 0, 2)
+                    ui.thaw(ui.xsapec.kt.Abundanc)
+                    #ui.xsapec.kt.Abundanc = 0.3
+                    #ui.freeze(ui.xsapec.kt.Abundanc)
                     ui.xsapec.kt.kt = 12.0
                     ui.xsapec.kt.norm = 7e-4
 
@@ -613,7 +616,8 @@ def fit_spec(res_dir, obsids, z):
 
                     tab_area_fact = tab_area_cl / tab_area_bkg[i]
 
-                    if i % 2:
+#                    if i % 2:
+                    if True:
                         ui.set_source(
                             i,
                             ui.xsphabs.nH * ui.xsapec.kt
@@ -639,10 +643,11 @@ def fit_spec(res_dir, obsids, z):
                         ui.covar(kt.kt)
 
                 i = 1
+#                i = 0
                 for obsid in tab_obsid:
-                    tab_area_fact = tab_area_cl / tab_area_bkg[i]
+#                    tab_area_fact = tab_area_cl / tab_area_bkg[i]
                     spec_fit = copy.deepcopy(ui.get_fit_plot(i))
-                    bkg_fit = copy.deepcopy(ui.get_fit_plot(i + 1))
+#                    bkg_fit = copy.deepcopy(ui.get_fit_plot(i + 1))
                     save_spec = (
                         cl_dir + "spec_fit_" + obsid + "_" + str(ind_ann) + ".npz"
                     )
@@ -654,15 +659,16 @@ def fit_spec(res_dir, obsids, z):
                         datayerr=spec_fit.dataplot.yerr,
                         fitx=spec_fit.modelplot.x,
                         fity=spec_fit.modelplot.y,
-                        bkgdatx=bkg_fit.dataplot.x,
-                        bkgdaty=bkg_fit.dataplot.y,
-                        bkgdatxerr=bkg_fit.dataplot.xerr,
-                        bkgdatyerr=bkg_fit.dataplot.yerr,
-                        bkgfitx=bkg_fit.modelplot.x,
-                        bkgfity=bkg_fit.modelplot.y,
-                        bkgsc=tab_area_fact[ind_ann - 1],
+#                        bkgdatx=bkg_fit.dataplot.x,
+#                        bkgdaty=bkg_fit.dataplot.y,
+#                        bkgdatxerr=bkg_fit.dataplot.xerr,
+#                        bkgdatyerr=bkg_fit.dataplot.yerr,
+#                        bkgfitx=bkg_fit.modelplot.x,
+#                        bkgfity=bkg_fit.modelplot.y,
+#                        bkgsc=tab_area_fact[ind_ann - 1],
                     )
-                    i += 2
+#                    i += 2
+                    i += 1
 
                 if N_spec_reg == 1:
                     final_res = ui.get_covar_results()

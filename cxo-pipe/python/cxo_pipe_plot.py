@@ -349,9 +349,9 @@ def plot_spectra(res_dir, obsids):
             for i in range(1, len(spec_files) + 1):
                 spec_ann_file = cl_dir + "spec_fit_" + obsid + "_" + str(i) + ".npz"
                 spec_ann = np.load(spec_ann_file)
-                int_bkg_fit = np.interp(
-                    spec_ann["fitx"], spec_ann["bkgfitx"], spec_ann["bkgfity"]
-                )
+#                int_bkg_fit = np.interp(
+#                    spec_ann["fitx"], spec_ann["bkgfitx"], spec_ann["bkgfity"]
+#                )
                 file_save = fig_dir + "spectrum_" + obsid + "_" + str(i) + ".pdf"
                 with PdfPages(file_save) as pdf:
                     with warnings.catch_warnings():
@@ -368,19 +368,19 @@ def plot_spectra(res_dir, obsids):
                         ax0.set_ylabel(
                             r"$\mathrm{Counts~s^{-1}~keV^{-1}}$", fontsize=12
                         )
-                        ax0.set_ylim(
-                            np.max(
-                                [
-                                    1e-5,
-                                    0.9
-                                    * np.min(
-                                        float(spec_ann["bkgsc"])
-                                        * int_bkg_fit[spec_ann["fitx"] < 7.0]
-                                    ),
-                                ]
-                            ),
-                            1.1 * np.max(spec_ann["datay"] + spec_ann["datayerr"]),
-                        )
+#                        ax0.set_ylim(
+#                            np.max(
+#                                [
+#                                    1e-5,
+#                                    0.9
+#                                    * np.min(
+#                                        float(spec_ann["bkgsc"])
+#                                        * int_bkg_fit[spec_ann["fitx"] < 7.0]
+#                                    ),
+#                                ]
+#                            ),
+#                            1.1 * np.max(spec_ann["datay"] + spec_ann["datayerr"]),
+#                        )
                         ax0.grid(alpha=0.5, which="both")
                         ax0.set_xticklabels([])
                         ax0.plot(
@@ -391,26 +391,26 @@ def plot_spectra(res_dir, obsids):
                             label=r"$\mathrm{Total}$",
                             zorder=10,
                         )
-                        ax0.plot(
-                            spec_ann["fitx"],
-                            spec_ann["fity"] - float(spec_ann["bkgsc"]) * int_bkg_fit,
-                            color="#ED591A",
-                            lw=1.4,
-                            ls=(0, (3, 5)),
-                            label=r"$\mathrm{Source}$",
-                            dash_capstyle="round",
-                            zorder=9,
-                        )
-                        ax0.plot(
-                            spec_ann["bkgfitx"],
-                            float(spec_ann["bkgsc"]) * spec_ann["bkgfity"],
-                            color="#8C6873",
-                            lw=1.4,
-                            ls=(0, (3, 5, 1, 5, 1, 5)),
-                            label=r"$\mathrm{Background}$",
-                            dash_capstyle="round",
-                            zorder=8,
-                        )
+#                        ax0.plot(
+#                            spec_ann["fitx"],
+#                            spec_ann["fity"] - float(spec_ann["bkgsc"]) * int_bkg_fit,
+#                            color="#ED591A",
+#                            lw=1.4,
+#                            ls=(0, (3, 5)),
+#                            label=r"$\mathrm{Source}$",
+#                            dash_capstyle="round",
+#                            zorder=9,
+#                        )
+#                        ax0.plot(
+#                            spec_ann["bkgfitx"],
+#                            float(spec_ann["bkgsc"]) * spec_ann["bkgfity"],
+#                            color="#8C6873",
+#                            lw=1.4,
+#                            ls=(0, (3, 5, 1, 5, 1, 5)),
+#                            label=r"$\mathrm{Background}$",
+#                            dash_capstyle="round",
+#                            zorder=8,
+#                        )
                         ax0.errorbar(
                             spec_ann["datax"],
                             spec_ann["datay"],
@@ -426,51 +426,52 @@ def plot_spectra(res_dir, obsids):
                             capthick=1,
                         )
 
-                        ax1.plot(
-                            spec_ann["bkgfitx"],
-                            spec_ann["bkgfity"],
-                            color="#BA094A",
-                            lw=1.2,
-                            label=r"$\mathrm{Background~model}$",
-                            zorder=10,
-                        )
-                        ax1.errorbar(
-                            spec_ann["bkgdatx"],
-                            spec_ann["bkgdaty"],
-                            yerr=spec_ann["bkgdatyerr"],
-                            xerr=spec_ann["bkgdatxerr"],
-                            fmt="o",
-                            label=r"$\mathrm{Background~data}$",
-                            mfc="#31B0CC",
-                            mec="#001199",
-                            mew=1.5,
-                            ecolor="#001199",
-                            elinewidth=1,
-                            capthick=1,
-                        )
-                        ax1.set_ylim(
-                            0.9
-                            * np.min(
-                                (spec_ann["bkgdaty"] - spec_ann["bkgdatyerr"])[
-                                    spec_ann["bkgdatx"] < 7.0
-                                ]
-                            ),
-                            1.1 * np.max(spec_ann["bkgdaty"] + spec_ann["bkgdatyerr"]),
-                        )
+#                        ax1.plot(
+#                            spec_ann["bkgfitx"],
+#                            spec_ann["bkgfity"],
+#                            color="#BA094A",
+#                            lw=1.2,
+#                            label=r"$\mathrm{Background~model}$",
+#                            zorder=10,
+#                        )
+#                        ax1.errorbar(
+#                            spec_ann["bkgdatx"],
+#                            spec_ann["bkgdaty"],
+#                            yerr=spec_ann["bkgdatyerr"],
+#                            xerr=spec_ann["bkgdatxerr"],
+#                            fmt="o",
+#                            label=r"$\mathrm{Background~data}$",
+#                            mfc="#31B0CC",
+#                            mec="#001199",
+#                            mew=1.5,
+#                            ecolor="#001199",
+#                            elinewidth=1,
+#                            capthick=1,
+#                        )
+#                        ax1.set_ylim(
+#                            0.9
+#                            * np.min(
+#                                (spec_ann["bkgdaty"] - spec_ann["bkgdatyerr"])[
+#                                    spec_ann["bkgdatx"] < 7.0
+#                                ]
+#                            ),
+#                            1.1 * np.max(spec_ann["bkgdaty"] + spec_ann["bkgdatyerr"]),
+#                        )
                         ax1.set_xlim(0.7, 9)
                         ax1.set_xlabel(r"$\mathrm{Energy~[keV]}$", fontsize=12)
                         ax1.set_ylabel(
                             r"$\mathrm{Counts~s^{-1}~keV^{-1}}$", fontsize=12
                         )
                         ax1.grid(alpha=0.5, which="both")
-                        if (
-                            np.max(spec_ann["fity"])
-                            / np.max(float(spec_ann["bkgsc"]) * spec_ann["bkgfity"])
-                            > 10
-                        ):
-                            leg = ax0.legend(fontsize=10, loc=4, framealpha=1)
-                        else:
-                            leg = ax0.legend(fontsize=10, loc=1, framealpha=1)
+#                        if (
+#                            np.max(spec_ann["fity"])
+#                            / np.max(float(spec_ann["bkgsc"]) * spec_ann["bkgfity"])
+#                            > 10
+#                        ):
+#                            leg = ax0.legend(fontsize=10, loc=4, framealpha=1)
+#                        else:
+#                            leg = ax0.legend(fontsize=10, loc=1, framealpha=1)
+                        leg = ax0.legend(fontsize=10, loc=1, framealpha=1)
                         leg.set_zorder(100)
                         ax1.legend(fontsize=10, loc=1)
                         pdf.savefig()
