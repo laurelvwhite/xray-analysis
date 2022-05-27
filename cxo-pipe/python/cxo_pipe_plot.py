@@ -519,6 +519,9 @@ def plot_T_prof(res_dir, R500):
 
         with PdfPages(file_save) as pdf:
             with warnings.catch_warnings():
+                print(T_data["datax"])
+                print(T_data["datay"])
+                print(T_data["datayerr"])
                 warnings.simplefilter("ignore")
                 fig, ax = plt.subplots(nrows=1, sharex=True)
                 ax.set_xscale("log")

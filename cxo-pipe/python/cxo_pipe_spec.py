@@ -132,19 +132,17 @@ def find_spec_annuli(
             inner_rad = 0.0
             outer_rad = 0.0
             index_ring = 1
-            min_count = 400
+            min_count = 1000
             inner_rad_tab = []
             outer_rad_tab = []
             while inner_rad < R500_pix:
                 N_tot = 0
+                N_net = 0
                 rad_add = 0.0
-                S2N = 0.0
-                while ((S2N < 20) | (N_tot < min_count)) & (rad_add < R500_pix): ## CHANGE BACK TO SNR THRESH 30 (?)
-                    if inner_rad < 20.0:
-                        rad_add += 1.0
-                    else:
-                        rad_add += 20.0
-                    outer_rad = inner_rad + rad_add
+                outer_rad_counts = 0
+                while (N_net < min_count) & (outer_rad_counts <= R500_pix):
+                    rad_add += 1.0
+                    outer_rad_counts = inner_rad + rad_add
                     reg_file_name_i = (
                         cl_dir + "spec_annulus_" + str(index_ring) + ".reg"
                     )
@@ -158,7 +156,7 @@ def find_spec_annuli(
                         + ","
                         + str(inner_rad)
                         + ","
-                        + str(outer_rad)
+                        + str(outer_rad_counts)
                         + ")"
                     )
                     reg_file_i.close()
@@ -174,15 +172,17 @@ def find_spec_annuli(
                     with open(counts_file_name_i) as f:
                         content = f.readlines()
                     N_tot = float(content[5][9:-1])
-                    area_ann_i = (np.pi * outer_rad ** 2) - (np.pi * inner_rad ** 2)
+                    area_ann_i = (np.pi * outer_rad_counts ** 2) - (np.pi * inner_rad ** 2)
                     N_B = bkg_count_rate * cl_header["exposure"] * area_ann_i
-                    S2N = (N_tot - N_B) / np.sqrt(N_tot)
+                    N_net = N_tot - N_B
 
-                if rad_add < R500_pix:
-                    inner_rad_tab.append(inner_rad)
-                    outer_rad_tab.append(outer_rad)
-                    index_ring += 1
-                inner_rad += rad_add
+                outer_rad = max(outer_rad_counts, 1.2*inner_rad, inner_rad+1)
+                if outer_rad > R500_pix:
+                    outer_rad = R500_pix
+                inner_rad_tab.append(inner_rad)
+                outer_rad_tab.append(outer_rad)
+                index_ring += 1
+                inner_rad = outer_rad
 
             if index_ring == 1:
                 reg_file_name_i = cl_dir + "spec_annulus_" + str(index_ring) + ".reg"
@@ -557,6 +557,10 @@ def fit_spec(res_dir, obsids, z):
                         fit_ind,
                         cl_dir + "cl_spectrum_" + obsid + "_" + str(ind_ann) + ".pi",
                     )
+                    ui.load_bkg(
+                        fit_ind,
+                        cl_dir + "cl_spectrum_" + obsid + "_" + str(ind_ann) + "_bkg.pi",
+                    )
                     fit_ind += 1
 #                    tab_area_bkg.append(area_bkg)
 #                    ui.load_data(fit_ind, bkg_dir + "bkg_spectrum_" + obsid + ".pi")
@@ -636,12 +640,8 @@ def fit_spec(res_dir, obsids, z):
 #                        )
 
                 ## My code                    
-                   #ui.xsphabs.nH.nH = 0.07
-                   #ui.freeze(ui.xsphabs.nH.nH)
                     ui.xsphabs.nH.nH = nH_val
-                    ui.thaw(ui.xsphabs.nH.nH)
-                    #ui.xsapec.kt.redshift = z
-                    #ui.freeze(ui.xsapec.kt.redshift)
+                    ui.freeze(ui.xsphabs.nH.nH)
                     ui.set_par(ui.xsapec.kt.redshift, z, z-0.01, z+0.01)
                     ui.thaw(ui.xsapec.kt.redshift)
                     ui.set_par(ui.xsapec.kt.Abundanc, 0.3, 0, 2)
