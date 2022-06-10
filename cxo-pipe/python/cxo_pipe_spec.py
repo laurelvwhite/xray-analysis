@@ -177,6 +177,7 @@ def find_spec_annuli(
                     N_net = N_tot - N_B
 
                 outer_rad = max(outer_rad_counts, 1.2*inner_rad, inner_rad+1)
+                print('Setting a limit at {} pixels'.format(outer_rad))
                 if outer_rad > R500_pix:
                     outer_rad = R500_pix
                 inner_rad_tab.append(inner_rad)
@@ -562,9 +563,6 @@ def fit_spec(res_dir, obsids, z):
                         cl_dir + "cl_spectrum_" + obsid + "_" + str(ind_ann) + "_bkg.pi",
                     )
                     fit_ind += 1
-#                    tab_area_bkg.append(area_bkg)
-#                    ui.load_data(fit_ind, bkg_dir + "bkg_spectrum_" + obsid + ".pi")
-#                    fit_ind += 1
 
                 for i in range(1, fit_ind):
                     full_spec = ui.get_data_plot(i)
@@ -577,7 +575,6 @@ def fit_spec(res_dir, obsids, z):
                         area_scale = ui.get_backscal(i)
                         bkg_scale = ui.get_bkg_scale(i)
                         ui.set_backscal(i, area_scale * newscale / bkg_scale)
-#                    ui.subtract(i)
                     ui.group_snr(i, SNR_bin)
 
                 if (T_max != 100.0) & (T_max > 30.0):
@@ -585,61 +582,11 @@ def fit_spec(res_dir, obsids, z):
                 else:
                     ui.notice(0.7, 12)
 
-                #ui.set_method("neldermead")
-                #ui.set_stat("chi2gehrels")
                 ui.set_stat("wstat")
 
                 nH_val = float(np.load(mer_dir + "nH_value.npy"))
 
                 for i in range(1, fit_ind):
-#                    ui.xsphabs.nH.nH = nH_val
-#                    ui.thaw(ui.xsphabs.nH.nH)
-#                    #ui.freeze(ui.xsphabs.nH.nH)
-#                    ui.xsapec.kt.redshift = z
-#                    ui.thaw(ui.xsapec.kt.redshift)
-#                    #ui.freeze(ui.xsapec.kt.redshift)
-#                    ui.set_par(ui.xsapec.kt.Abundanc, 0.3, 0, 2)
-#                    ui.thaw(ui.xsapec.kt.Abundanc)
-#                    #ui.xsapec.kt.Abundanc = 0.3
-#                    #ui.freeze(ui.xsapec.kt.Abundanc)
-#                    #ui.xsapec.kt.kt = 12.0
-#                    ui.set_par(ui.xsapec.kt.kt, 4, 0.008, 100)
-#                    #ui.xsapec.kt.norm = 7e-4
-
-#                    ui.powlaw1d.p1.ref = 10
-#                    ui.powlaw1d.p1.gamma.min = -100
-#                    ui.powlaw1d.p1.gamma.max = 100
-#                    ui.powlaw1d.p1.gamma = 2
-#                    ui.powlaw1d.p1.ampl = 1e-2
-#                    ui.xsapec.ktb.redshift = 0.0
-#                    ui.freeze(ui.xsapec.ktb.redshift)
-#                    ui.xsapec.ktb.Abundanc = 1.0
-#                    ui.freeze(ui.xsapec.ktb.Abundanc)
-#                    ui.xsapec.ktb.kt = 0.18
-#                    ui.freeze(ui.xsapec.ktb.kt)
-#                    ui.xsapec.ktb.norm = 5e-2
-
-#                    tab_area_fact = tab_area_cl / tab_area_bkg[i]
-
-##                    if i % 2:
-#                    if True:
-#                        ui.set_source(
-#                            i,
-#                            ui.xsphabs.nH * ui.xsapec.kt
-#                            + tab_area_fact[ind_ann - 1]
-#                            * (
-#                                ui.const1d.a * ui.xsapec.ktb
-#                                + ui.const1d.b * ui.powlaw1d.p1
-#                            ),
-#                        )
-#                    else:
-#                        ui.set_source(
-#                            i,
-#                            ui.const1d.a * ui.xsapec.ktb
-#                            + ui.const1d.b * ui.powlaw1d.p1,
-#                        )
-
-                ## My code                    
                     ui.xsphabs.nH.nH = nH_val
                     ui.freeze(ui.xsphabs.nH.nH)
                     ui.set_par(ui.xsapec.kt.redshift, z, z-0.01, z+0.01)
@@ -647,12 +594,10 @@ def fit_spec(res_dir, obsids, z):
                     ui.set_par(ui.xsapec.kt.Abundanc, 0.3, 0, 2)
                     ui.thaw(ui.xsapec.kt.Abundanc)
                     ui.set_par(ui.xsapec.kt.kt, 4, 0.008, 100)
-
+                    ui.thaw(ui.xsapec.kt.kt)
                     ui.set_source(i, ui.xsphabs.nH * ui.xsapec.kt)
 
                 renorm()
-
-
 
                 ui.fit()
                 with warnings.catch_warnings():
@@ -663,11 +608,8 @@ def fit_spec(res_dir, obsids, z):
                         ui.covar(kt.kt)
 
                 i = 1
-#                i = 0
                 for obsid in tab_obsid:
-#                    tab_area_fact = tab_area_cl / tab_area_bkg[i]
                     spec_fit = copy.deepcopy(ui.get_fit_plot(i))
-#                    bkg_fit = copy.deepcopy(ui.get_fit_plot(i + 1))
                     save_spec = (
                         cl_dir + "spec_fit_" + obsid + "_" + str(ind_ann) + ".npz"
                     )
@@ -679,15 +621,7 @@ def fit_spec(res_dir, obsids, z):
                         datayerr=spec_fit.dataplot.yerr,
                         fitx=spec_fit.modelplot.x,
                         fity=spec_fit.modelplot.y,
-#                        bkgdatx=bkg_fit.dataplot.x,
-#                        bkgdaty=bkg_fit.dataplot.y,
-#                        bkgdatxerr=bkg_fit.dataplot.xerr,
-#                        bkgdatyerr=bkg_fit.dataplot.yerr,
-#                        bkgfitx=bkg_fit.modelplot.x,
-#                        bkgfity=bkg_fit.modelplot.y,
-#                        bkgsc=tab_area_fact[ind_ann - 1],
                     )
-#                    i += 2
                     i += 1
 
                 if N_spec_reg == 1:
@@ -809,6 +743,7 @@ def fit_T_prof(res_dir, R500, z):
 
             rad_ann = np.array(rad_ann)
             rad_ann_mid = ((rad_ann + np.roll(rad_ann, -1)) / 2.0)[:-1]
+            print(rad_ann_mid)
             rad_ann_mid_R500 = rad_ann_mid / R500
             rad_ann_err = rad_ann_mid - rad_ann[:-1]
 

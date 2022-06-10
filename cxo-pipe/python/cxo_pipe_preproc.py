@@ -908,7 +908,7 @@ def find_peak_cent(res_dir, z, R500, use_peak, fixed_coord):
 
 def bkg_region(res_dir, z, R500, Xdepro, Ydepro, multiobs, obsids):
     """
-    Computes the background region far from the cluster
+    Computes the background region using blanksky files
 
     Parameters
     __________
@@ -922,8 +922,8 @@ def bkg_region(res_dir, z, R500, Xdepro, Ydepro, multiobs, obsids):
 
     Returns
     _______
-    Creates a DS9 region file called bkg_region.reg from which the
-    background can be estimated. Returns the area of the region
+    Creates a DS9 region file called bkg_region.reg and downloads the
+    blanksky file for each obsid. Returns the area of the region
     in pixel**2
 
     """
@@ -950,11 +950,12 @@ def bkg_region(res_dir, z, R500, Xdepro, Ydepro, multiobs, obsids):
         for obsid in tab_obsid:
             if multiobs:
                 map_file = mer_dir + "All_" + obsid + "_reproj_evt.fits"
+                asol_file = mer_dir + "/All_" + obsid + ".asol"
             else:
                 map_file = mer_dir + "efile_repro_raw_clean.fits"
+                asol_file = res_dir + "/" + obsid + "/*asol1.fits"
 
             blanksky_file = mer_dir + "blank_sky_" + obsid + ".evt"
-            asol_file = mer_dir + "/All_" + obsid + ".asol"
             sp.call(["bash", "shell/download_blank_sky.sh", map_file, blanksky_file, asol_file])
 
             reg_file_cl = mer_dir + "bkg_region_" + obsid + ".reg"

@@ -26,6 +26,6 @@ pset dmextract opt=ltc1
 EOD
 }
 
-deflare $outfile $gtifile method=clean
+deflare $outfile $gtifile method=clean minfrac=0.09
 
 dmcopy $infile"[@"$gtifile"]" $outclean clob+

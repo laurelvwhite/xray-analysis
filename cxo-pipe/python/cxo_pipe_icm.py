@@ -115,6 +115,54 @@ def gNFW_model(r, param):
     return model
 
 
+def VPM_model_kT(r, param, R500):
+    """
+    Computes the temperature profile based on a
+    Vikhlinin parametric model (Vikhlinin+2006)
+
+    Parameters
+    __________
+    r: array containing the radial range considered in kpc
+    param: the model parameters, T0, Tmin/T0 
+    R500: pass in R500 to scale the radii
+
+    Returns
+    _______
+    model: the ICM temperature profile of the cluster
+    across the considered radial range
+
+    """
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+
+        x = r/R500
+
+        # T0, Tmin/T0 = param
+        model = (
+            param[0]
+            * (((x / 0.045) ** 1.9 + param[1]) / ((x / 0.045) ** 1.9 + 1.0))
+            * (1.0 + (x / 0.6) ** 2) ** (-0.45)
+        )
+
+        # # T0, Tmin, rcool, acool, rt, a, b, c = param
+        # model = (
+        #     param[0]
+        #     * ( (r/param[2])**param[3] + (param[1]/param[0]) ) / ( (r/param[2])**param[3] + 1 )
+        #     * ( r/param[4] )**(-1 * param[5]) / ( (1 + (r/param[4])**param[6] )**(param[7]/param[6]) )
+        #     )
+
+        # # T0, Tmin, rcool, rt, b, c = param # fixing a=0, acool=2
+        # model = (
+        #     param[0]
+        #     * ( (r/param[2])**2 + (param[1]/param[0]) ) / ( (r/param[2])**2 + 1 )
+        #     * 1 / ( (1 + (r/param[3])**param[4] )**(param[5]/param[4]) )
+        #     )
+
+
+    return model
+
+
 def init_integ_maps(z, R500):
 
     """
@@ -333,6 +381,50 @@ def ln_likelihood_pe(
     return lnlike
 
 
+
+def ln_likelihood_kT(
+    param, theta, Tx_data, Tx_data_err, R500
+):
+
+    """
+    Computes the log-likelihood function used to fit
+    the spectroscopic temperature profile
+
+    Parameters
+    __________
+    param: the model parameters, T0, Tmin, R500
+    theta: projected radius of the temperature profile
+    Tx_data: the spectroscopic temperature profile
+    Tx_data_err: the error bars associated with Tx_data
+    ne_fit: the best-fit ICM density model
+    ne_fit_err: the error bars associated with ne_model
+
+    Returns
+    _______
+    lnlike: the value of the log-likelihood for the
+    considered set of model parameters
+
+    """
+
+    # kT_model = VPM_model_kT(theta, param)
+    # if np.random.uniform(-1, 1) < 0:
+    #     ne_model = ne_fit - np.abs(np.random.normal()) * ne_fit_errd
+    # else:
+    #     ne_model = ne_fit + np.abs(np.random.normal()) * ne_fit_erru
+
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        Te_model = VPM_model_kT(theta, param, R500)
+        lnlike_tab = -0.5 * ((Tx_data - Te_model) / Tx_data_err) ** 2
+        lnlike = np.sum(lnlike_tab)
+
+
+    if not np.isfinite(lnlike):
+        return -np.inf
+    return lnlike
+
+
+
 def ln_prior_ne(param):
     """
     Computes the log-prior distribution used to fit
@@ -364,6 +456,7 @@ def ln_prior_ne(param):
         return -np.inf
     else:
         return bkg_prior
+
 
 
 def ln_prior_pe(param, r_test, VPM_param):
@@ -423,6 +516,104 @@ def ln_prior_pe(param, r_test, VPM_param):
         d1_MHSE_r = (np.gradient(MHSE_r, r_test))[0:-1]
 
     if all(d1_Ke >= 0 for d1_Ke in d1_Ke_prof) & all(d1_M >= 0 for d1_M in d1_MHSE_r):
+        check_term += 1
+
+    if check_term < 2:
+        return -np.inf
+    else:
+        return 0.0
+
+
+
+def ln_prior_kT(param, r_test, VPM_param, R500):
+    """
+    Computes the log-prior distribution used to fit
+    the spectroscopic temperature profile
+
+    Parameters
+    __________
+    param: the model parameters, P0,rp,a,b,c
+    r_test: a 3D radius array used to compute the model (in kpc)
+    VPM_param: the best-fit VPM parameters of the density profile
+
+    Returns
+    _______
+    The value of the log-prior for the
+    considered set of model parameters
+
+    """
+
+    T0, contrast = param
+    # T0, Tmin = param
+
+    check_term = 0.0
+    if (
+        T0 > 0
+        and T0 < 20
+        and contrast > 0
+        # and contrast <= 1
+        ):
+        check_term += 1
+
+    # if (
+    #     T0 > 0
+    #     and T0 < 20
+    #     and Tmin > 0
+    #     and Tmin < 10
+    #     ):
+    #     check_term += 1
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        # Pe = gNFW_model(r_test, param)
+        ne = VPM_model(r_test, VPM_param[:-1])
+
+        d1_ne_prof = (np.gradient(ne, r_test))[0:-1]
+
+        # Te_prof = Pe / ne
+        Te_prof = VPM_model_kT(r_test, param, R500)
+        d1_Te_prof = (np.gradient(Te_prof, r_test))[0:-1]
+        d2_Te_prof = (np.gradient(d1_Te_prof, r_test[0:-1]))[0:-1]
+
+        Ke_prof = Te_prof / ne ** (2.0 / 3.0)
+        d1_Ke_prof = (np.gradient(Ke_prof, r_test))[0:-1]
+
+        x = r_test/R500
+        # dTdr = Te_prof * (
+        #     ((1.9/0.045) * ((x/0.045)**0.9) / (contrast + (x/0.045)**1.9))
+        #     - ((2 * 0.45 / 0.6**2) * x / (1+(x/0.6)**2))
+        #     - ((1.9/0.045) * (x/0.045)**0.9 / (1+(x/0.045)**1.9))
+        #     )
+
+
+        # n0,rc,alpha,beta,rs,epsilon
+        # model = param[0] * (
+        #     ((r / param[1]) ** (-param[2] / 2.0))
+        #     / (
+        #         (1 + (r / param[1]) ** 2) ** (3 * param[3] / 2.0 - param[2] / 4.0)
+        #         * (1.0 + (r / param[4]) ** 3) ** (param[5] / 6)
+        #     )
+        # )
+        # dndr = ne / (2 * r_test * (VPM_param[1]**2 + r_test**2) / (1+(r_test/VPM_param[4])**3.)) * (
+        #     (VPM_param[2] * VPM_param[1]**2 * (1 + (r_test/VPM_param[4])**3.)) + (6 * VPM_param[3] * r_test**2 * (1 + (r_test/VPM_param[4])**3.)) + (VPM_param[5] * (r_test**2 + VPM_param[1]**2) * (r_test/VPM_param[4])**3.)
+        #     )
+
+
+
+        # print(f'Shape of ne: {np.shape(ne)}')
+        # print(f'Shape of dndr: {np.shape(dndr)}')
+        # print(f'Shape of te: {np.shape(Te_prof)}')
+        # print(f'Shape of dtdr: {np.shape(dTdr)}')
+        # print(f'Shape of ke: {np.shape(Ke_prof)}')
+        # print(f'Shape of dkdr: {np.shape(d1_Ke_prof)}')
+
+        # MHSE_r = -1.0 * r_test ** 2 * dpdr / ne
+        # MHSE_r = -1.0 * r_test ** 2 * Te_prof * ( (dTdr / Te_prof) + (dndr / ne) )
+        # d1_MHSE_r = (np.gradient(MHSE_r, r_test))[0:-1]
+        MHSE_r = -1.0 * r_test[0:-1] ** 2 * Te_prof[0:-1] * ( (d1_Te_prof / Te_prof[0:-1]) + (d1_ne_prof / ne[0:-1]) )
+        d1_MHSE_r = (np.gradient(MHSE_r, r_test[0:-1]))[0:-1]
+
+    if all(d1_Ke >= 0 for d1_Ke in d1_Ke_prof): #& all(d1_M >= 0 for d1_M in d1_MHSE_r):
         check_term += 1
 
     if check_term < 2:
@@ -527,6 +718,47 @@ def ln_posterior_pe(
         return lp + ll
 
 
+def ln_posterior_kT(
+    param,
+    theta,
+    Tx_data,
+    Tx_data_err,
+    r_test,
+    VPM_param,
+    R500,
+):
+    """
+    Computes the log-posterior distribution used to fit
+    the spectroscopic temperature profile
+
+    Parameters
+    __________
+    param: the model parameters, P0,rp,a,b,c
+    theta: projected radius of the temperature profile
+    Tx_data: the spectroscopic temperature profile
+    Tx_data_err: the error bars associated with Tx_data
+    ne_fit: the best-fit ICM density model
+    ne_fit_err: the error bars associated with ne_model
+    r_test: a 3D radius array used to compute the model (in kpc)
+    VPM_param: the best-fit VPM parameters of the density profile
+
+    Returns
+    _______
+    The value of the log-posterior for the
+    considered set of model parameters
+
+    """
+
+    lp = ln_prior_kT(param, r_test, VPM_param, R500)
+    if not np.isfinite(lp):
+        return -np.inf
+    else:
+        ll = ln_likelihood_kT(
+            param, theta, Tx_data, Tx_data_err, R500
+        )
+        return lp + ll
+
+
 def mcmc_sampler_ne(pos, ndim, nwalkers, nsteps, args_lnprob):
 
     """
@@ -586,6 +818,41 @@ def mcmc_sampler_pe(pos, ndim, nwalkers, nsteps, args_lnprob):
     with closing(Pool()) as pool:
         sampler = emcee.EnsembleSampler(
             nwalkers, ndim, ln_posterior_pe, a=2.0, args=args_lnprob, pool=pool
+        )
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            sampler.run_mcmc(pos, nsteps, progress=True)
+
+        pool.terminate()
+
+    return sampler
+
+
+def mcmc_sampler_kT(pos, ndim, nwalkers, nsteps, args_lnprob):
+
+    """
+    Performs a MCMC sampling of the parameter
+    space based on the likelihood function defined
+    to fit the spectroscopic temperature profile
+
+    Parameters
+    __________
+    pos: the initial guess of the parameters for each chain
+    ndim: the number of model parameters
+    nwalkers: the number of chains in the MCMC
+    nsteps: the number of steps
+    args_lnprob: the arguments of the posterior distribution
+
+    Returns
+    _______
+    sampler: the structure containing the chains of
+    parameters and the posterior values
+    """
+
+    with closing(Pool()) as pool:
+        sampler = emcee.EnsembleSampler(
+            nwalkers, ndim, ln_posterior_kT, a=2.0, args=args_lnprob, pool=pool
         )
 
         with warnings.catch_warnings():
@@ -760,7 +1027,7 @@ def mcmc_pe(res_dir):
 
         param_ini = np.asarray([8.4e-2, 850.0, 1.0510, 5.4905, 0.3081])
 
-        ndim, nwalkers, nsteps = param_ini.size, 400, 250
+        ndim, nwalkers, nsteps = param_ini.size, 400, 500
 
         P0 = np.random.uniform(0.0, 5.0 * param_ini[0], nwalkers)
         rp = np.random.uniform(0.0, 5000.0, nwalkers)
@@ -790,6 +1057,113 @@ def mcmc_pe(res_dir):
         ndim, nwalkers, nsteps = param_ini.size, 15, 10000
         pos = param_chains[min_chi2_chains[0:nwalkers], -1, :].tolist()
         sampler = mcmc_sampler_pe(pos, ndim, nwalkers, nsteps, args_lnprob)
+
+        np.savez(file_chains, param=sampler.chain, lnprob=sampler.lnprobability)
+
+
+def mcmc_kT(res_dir, R500):
+    """
+    Run the MCMC analysis to find the best-fit model
+    of the ICM temperature profile
+
+    Parameters
+    __________
+    res_dir: the result directory named after the cluster name
+
+    Returns
+    _______
+    Create a .npz file in the *MCMC_pe* folder of the *results*
+    directory in res_dir containing the chains of parameters
+    and likelihood values
+
+    """
+
+    mer_dir = res_dir + "/results/"
+    cl_dir = mer_dir + "cluster/"
+    mcmc_dir_ne = mer_dir + "MCMC_ne/"
+    mcmc_dir = mer_dir + "MCMC_kT/"
+
+    if not os.path.exists(mcmc_dir):
+        sp.call("mkdir " + mcmc_dir, shell=True)
+
+    print(
+        colored("Runnning temperature profile MCMC analysis...", "blue", None, ["bold"])
+    )
+    print("------------------------------------------------------------")
+
+    file_chains = mcmc_dir + "MCMC_chains.npz"
+
+    if os.path.exists(file_chains):
+        print(colored("MCMC analysis already done", "white", None, ["bold"]))
+        print("------------------------------------------------------------")
+    else:
+        saved_Tx_prof_file = cl_dir + "T_prof_fit.npz"
+        saved_Tx_prof = np.load(saved_Tx_prof_file)
+        theta = saved_Tx_prof["datax"]
+        Tx_data = saved_Tx_prof["datay"]
+        Tx_data_err = saved_Tx_prof["datayerr"]
+
+        # bestfit_ne_file = mcmc_dir_ne + "ne_best_fit.npz"
+        # bestfit_ne = np.load(bestfit_ne_file)
+        # r_model = bestfit_ne["r"]
+        # ne_model = bestfit_ne["ne"]
+        # ne_model_erru = bestfit_ne["ne_erru"]
+        # ne_model_errd = bestfit_ne["ne_errd"]
+
+        # ne_int_pow = np.interp(np.log10(theta), np.log10(r_model), np.log10(ne_model))
+        # ne_fit = 10.0 ** ne_int_pow
+
+        # ne_erru_int_pow = np.interp(
+        #     np.log10(theta), np.log10(r_model), np.log10(ne_model_erru)
+        # )
+        # ne_fit_erru = 10.0 ** ne_erru_int_pow
+
+        # ne_errd_int_pow = np.interp(
+        #     np.log10(theta), np.log10(r_model), np.log10(ne_model_errd)
+        # )
+        # ne_fit_errd = 10.0 ** ne_errd_int_pow
+
+        r_test = np.logspace(1.0, 3.0, 100)
+
+        VPM_param_file = mcmc_dir_ne + "best_fit_params.npy"
+        VPM_param = np.load(VPM_param_file)
+
+
+
+        mean_ICM_T = np.mean(Tx_data)
+        kT_contrast = Tx_data[0]/(1.35*mean_ICM_T)
+        # kT_min = Tx_data[0]
+
+        param_ini = np.asarray([ 1.35*mean_ICM_T, kT_contrast ])
+
+        ndim, nwalkers, nsteps = param_ini.size, 400, 500
+
+        T0       = np.random.uniform(0.75 * param_ini[0], 1.25 * param_ini[0], nwalkers)
+        # Tmin     = np.random.uniform(np.max([0.0, param_ini[1] - Tx_data_err[0]]), param_ini[1] + Tx_data_err[0], nwalkers)
+        contrast = np.random.uniform(0.001, np.min([1.0, 2.0 * param_ini[1]]), nwalkers)
+        pos_tab  = np.vstack((T0, contrast)).T
+
+        pos_tab[-1, :] = param_ini
+        pos = pos_tab.tolist()
+
+
+        args_lnprob = [
+            theta,
+            Tx_data,
+            Tx_data_err,
+            r_test,
+            VPM_param,
+            R500,
+        ]
+        sampler = mcmc_sampler_kT(pos, ndim, nwalkers, nsteps, args_lnprob)
+
+        chi2_chains = -2.0 * sampler.lnprobability
+        min_chi2_chains = np.argsort(chi2_chains[:, -1])
+        param_chains = sampler.chain
+
+        ndim, nwalkers, nsteps = param_ini.size, 50, 10000
+        pos = param_chains[min_chi2_chains[0:nwalkers], -1, :].tolist()
+        sampler = mcmc_sampler_kT(pos, ndim, nwalkers, nsteps, args_lnprob)
 
         np.savez(file_chains, param=sampler.chain, lnprob=sampler.lnprobability)
 
@@ -1183,6 +1557,380 @@ def best_icm_models(res_dir, z, R500, N_ann, Ysz):
                     / (mu * mp * GN * ne_buff * 1e6)
                     / sol_mass
                 )
+                Mgas_buff = np.cumsum(
+                    (
+                        (4 * np.pi * (tab_r * kpc2m) ** 2 * ne_buff * 1e6 * mue * mp)
+                        / sol_mass
+                    )
+                    * delta_r
+                    * kpc2m
+                )
+
+                ICM_lambda_buff = 10 ** (np.interp(te_buff, Temp_tab, loglambda))
+                te_erg_buff = (te_buff * u.keV).to("erg").value
+                nI_buff = ne_buff / 1.199
+                tcool_buff = (
+                    1e-9
+                    * (
+                        (
+                            1.5
+                            * (ne_buff + nI_buff)
+                            * te_erg_buff
+                            / (ne_buff * nI_buff * ICM_lambda_buff)
+                        )
+                        * u.s
+                    )
+                    .to("year")
+                    .value
+                )
+
+                T_mean500 = np.nanmean(
+                    te_buff[((tab_r > 0.15 * R500) & (tab_r < R500))]
+                )
+                Mg500 = np.interp(R500, tab_r, Mgas_buff)
+                Yx = Mg500 * T_mean500
+                # Scaling relation from Arnaud et al. 2010 Eq. (2)
+                M_Yx = (
+                    10 ** 14.567
+                    * (Yx / (2e14 * (cosmo.H0.value / 70.0) ** (-5.0 / 2.0))) ** 0.561
+                    * (cosmo.H0.value / 70.0) ** (-1.0)
+                ) / cosmo.efunc(z) ** (2.0 / 5.0)
+
+                store_profiles_pe[:, i] = pe_buff
+                store_profiles_te[:, i] = te_buff
+                store_profiles_ke[:, i] = ke_buff
+                store_profiles_Mhse[:, i] = Mhse_buff
+                store_profiles_Mgas[:, i] = Mgas_buff
+                store_profiles_tcool[:, i] = tcool_buff
+                store_MYx[i] = M_Yx
+
+        pe_std_up, pe_std_down = get_asymmetric_err(tab_r, pe, store_profiles_pe)
+        te_std_up, te_std_down = get_asymmetric_err(tab_r, te, store_profiles_te)
+        ke_std_up, ke_std_down = get_asymmetric_err(tab_r, ke, store_profiles_ke)
+        Mhse_std_up, Mhse_std_down = get_asymmetric_err(
+            tab_r, Mhse, store_profiles_Mhse
+        )
+        Mgas_std_up, Mgas_std_down = get_asymmetric_err(
+            tab_r, Mgas, store_profiles_Mgas
+        )
+        tcool_std_up, tcool_std_down = get_asymmetric_err(
+            tab_r, tcool, store_profiles_tcool
+        )
+
+        MYx_mean = np.nanmean(store_MYx)
+        R500_Yx = (
+            (
+                (
+                    (MYx_mean * u.Msun)
+                    / ((4.0 / 3.0) * np.pi * 500.0 * cosmo.critical_density(z))
+                )
+                ** (1.0 / 3.0)
+            )
+            .to("kpc")
+            .value
+        )
+        Delta_R500 = np.abs(R500_Yx - R500) / R500
+        while Delta_R500 > 5e-2:
+            New_R500 = R500_Yx
+            for i in range(store_MYx.size):
+                rdval = np.random.uniform(-1, 1)
+                if rdval > 0:
+                    Te_buff = te + np.abs(np.random.normal()) * te_std_up
+                else:
+                    Te_buff = te - np.abs(np.random.normal()) * te_std_down
+                T_mean500 = np.nanmean(
+                    Te_buff[((tab_r > 0.15 * R500) & (tab_r < R500))]
+                )
+                Mgas_buff = store_profiles_Mgas[:, i]
+                Mg500 = np.interp(New_R500, tab_r, Mgas_buff)
+                Yx = Mg500 * T_mean500
+                M_Yx = (
+                    10 ** 14.567
+                    * (Yx / (2e14 * (cosmo.H0.value / 70.0) ** (-5.0 / 2.0))) ** 0.561
+                    * (cosmo.H0.value / 70.0) ** (-1.0)
+                ) / cosmo.efunc(z) ** (2.0 / 5.0)
+                store_MYx[i] = M_Yx
+            MYx_mean = np.nanmean(store_MYx)
+            R500_Yx = (
+                (
+                    (
+                        (MYx_mean * u.Msun)
+                        / ((4.0 / 3.0) * np.pi * 500.0 * cosmo.critical_density(z))
+                    )
+                    ** (1.0 / 3.0)
+                )
+                .to("kpc")
+                .value
+            )
+            Delta_R500 = np.abs(R500_Yx - New_R500) / New_R500
+
+        MYx_mean = np.nanmean(store_MYx)
+        MYx_std = np.nanstd(store_MYx)
+        R500_Yx = (
+            (
+                (
+                    (MYx_mean * u.Msun)
+                    / ((4.0 / 3.0) * np.pi * 500.0 * cosmo.critical_density(z))
+                )
+                ** (1.0 / 3.0)
+            )
+            .to("kpc")
+            .value
+        )
+
+        np.savez(
+            file_save_icm,
+            r=tab_r,
+            ne=ne,
+            ne_erru=ne_erru,
+            ne_errd=ne_errd,
+            pe=pe,
+            pe_erru=pe_std_up,
+            pe_errd=pe_std_down,
+            te=te,
+            te_erru=te_std_up,
+            te_errd=te_std_down,
+            ke=ke,
+            ke_erru=ke_std_up,
+            ke_errd=ke_std_down,
+            Mhse=Mhse,
+            Mhse_erru=Mhse_std_up,
+            Mhse_errd=Mhse_std_down,
+            Mgas=Mgas,
+            Mgas_erru=Mgas_std_up,
+            Mgas_errd=Mgas_std_down,
+            tcool=tcool,
+            tcool_erru=tcool_std_up,
+            tcool_errd=tcool_std_down,
+            R500=R500_Yx,
+            MYx=MYx_mean,
+            MYx_err=MYx_std,
+        )
+
+        if Ysz is not None:
+            cluster_header = fits.Header()
+            cluster_header["Redshift"] = z
+            cluster_header["R500"] = R500_Yx
+            cluster_header["Reso"] = 10.0
+            cluster_header["Y075"] = Ysz[0]
+            cluster_header["Y075_err"] = Ysz[1]
+            cluster_header["Thetamax"] = 2.0
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                fits.writeto(
+                    cl_dir + "/y_profile_MCMC.fits",
+                    np.ones(10),
+                    header=cluster_header,
+                    clobber=True,
+                )
+                fits.append(
+                    cl_dir + "/y_profile_MCMC.fits",
+                    np.ones(10),
+                    header=cluster_header,
+                    clobber=True,
+                )
+                fits.append(
+                    cl_dir + "/y_profile_MCMC.fits",
+                    np.ones(10),
+                    header=cluster_header,
+                    clobber=True,
+                )
+
+
+def best_icm_models_kTdirect(res_dir, z, R500, N_ann, Ysz):
+    """
+    Get best-fit ICM models and estimate uncertainties
+
+    Parameters
+    __________
+    res_dir: the result directory named after the cluster name
+    z: the cluster redshift
+    R500: the cluster R500 radius in kpc
+    N_ann: number of annuli considered for spectrum extraction
+
+    Returns
+    _______
+    Create a .npz file in the *ICM* folder of the *results*
+    directory in res_dir containing the best-fit ICM profiles
+    and their associated uncertainty at 1-sigma
+
+    """
+
+    mer_dir = res_dir + "/results/"
+    cl_dir = mer_dir + "cluster/"
+    mcmc_dir_ne = mer_dir + "MCMC_ne/"
+    mcmc_dir_kT = mer_dir + "MCMC_kT/"
+
+    icm_dir = mer_dir + "ICM/"
+
+    if not os.path.exists(icm_dir):
+        sp.call("mkdir " + icm_dir, shell=True)
+
+    print(colored("Computing best-fit ICM profiles...", "blue", None, ["bold"]))
+    print("------------------------------------------------------------")
+
+    file_save_icm = icm_dir + "ICM_best_fits.npz"
+
+    if os.path.exists(file_save_icm):
+        print(colored("Best-fit models already computed", "white", None, ["bold"]))
+        print("------------------------------------------------------------")
+    else:
+        bestfit_ne_file = mcmc_dir_ne + "ne_best_fit.npz"
+        bestfit_ne = np.load(bestfit_ne_file)
+        tab_r = bestfit_ne["r"]
+        ne = bestfit_ne["ne"]
+        ne_erru = bestfit_ne["ne_erru"]
+        ne_errd = bestfit_ne["ne_errd"]
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            if N_ann > 2:
+                file_cleaned_chains = mcmc_dir_kT + "MCMC_chains_clean.npz"
+                cleaned_chains = np.load(file_cleaned_chains)
+                samples = cleaned_chains["samp"]
+                file_best_fit_kT = mcmc_dir_kT + "best_fit_params.npy"
+                best_fit_param_kT = np.load(file_best_fit_kT)
+                te = VPM_model_kT(tab_r, best_fit_param_kT, R500)
+                # pe = gNFW_model(tab_r, best_fit_param_pe)
+                # te = pe / ne
+                pe = ne * te
+            else:
+                Tx_fit_file = cl_dir + "T_prof_fit.npz"
+                Tx_fit = np.load(Tx_fit_file)
+                Tx_r = Tx_fit["fitx"]
+                Tx = Tx_fit["fity"]
+                Tx_err = Tx_fit["fityerr"]
+                te_pow = extrap(np.log10(tab_r), np.log10(Tx_r), np.log10(Tx))
+                te = 10.0 ** te_pow
+                te_erru_pow = extrap(np.log10(tab_r), np.log10(Tx_r), np.log10(Tx_err))
+                te_erru = 10.0 ** te_erru_pow
+                te_errd_pow = extrap(np.log10(tab_r), np.log10(Tx_r), np.log10(Tx_err))
+                te_errd = 10.0 ** te_errd_pow
+                pe = ne * te
+
+            ke = te / ne ** (2.0 / 3.0)
+
+            logT, loglambda = read_ds_cooling("m-05.cie")
+            Temp_tab = (10 ** logT) * const.k_B.to(u.keV / u.K).value
+            ICM_lambda = 10 ** (np.interp(te, Temp_tab, loglambda))
+            te_erg = (te * u.keV).to("erg").value
+            nI = ne / 1.199
+            tcool = (
+                1e-9
+                * ((1.5 * (ne + nI) * te_erg / (ne * nI * ICM_lambda)) * u.s)
+                .to("year")
+                .value
+            )
+
+        delta_r = np.roll(tab_r, -1) - tab_r
+
+        N_MC = 1500
+        store_profiles_pe = np.zeros((tab_r.size, N_MC))
+        store_profiles_te = np.zeros((tab_r.size, N_MC))
+        store_profiles_ke = np.zeros((tab_r.size, N_MC))
+        store_profiles_Mhse = np.zeros((tab_r.size, N_MC))
+        store_profiles_Mgas = np.zeros((tab_r.size, N_MC))
+        store_profiles_tcool = np.zeros((tab_r.size, N_MC))
+        store_MYx = np.zeros(N_MC)
+
+
+        kpc2m = (u.kpc).to("m")
+        kev2pa = (u.keV / u.cm ** 3).to("Pa")
+        kev2joule = (u.keV).to("J")
+        sol_mass = (u.M_sun).to("kg")
+        mp = const.m_p.value
+        GN = const.G.value
+        mu = 0.62
+        mue = 1.15
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            # if N_ann > 2:
+            #     P0, rp, a, b, c = best_fit_param_pe
+            #     dpdr = (
+            #         -P0
+            #         * (tab_r / rp) ** (-c)
+            #         * (1 + (tab_r / rp) ** a) ** (-(a + b - c) / a)
+            #         * (b * (tab_r / rp) ** a + c)
+            #         / tab_r
+            #     )
+            # else:
+            #     dpdr = np.gradient(pe, tab_r)
+            #
+            #
+            # Mhse = (
+            #     -((tab_r * kpc2m) ** 2)
+            #     * (kev2pa * dpdr / kpc2m)
+            #     / (mu * mp * GN * ne * 1e6)
+            #     / sol_mass
+            # )
+
+
+
+
+            dTdr = np.gradient(te, tab_r)
+            dndr = np.gradient(ne, tab_r)
+
+
+            Mhse = (
+                -((tab_r * kpc2m) ** 2)
+                * (te * kev2joule)
+                * ( ( (dTdr * kev2joule/ kpc2m)/ (te*kev2joule)) + ((dndr * 1e6 / kpc2m) / (ne*1e6)) )
+                / (mu * mp * GN)
+                / sol_mass
+            )
+            Mgas = np.cumsum(
+                ((4 * np.pi * (tab_r * kpc2m) ** 2 * ne * 1e6 * mue * mp) / sol_mass)
+                * delta_r
+                * kpc2m
+            )
+
+            for i in range(N_MC):
+                if np.random.uniform(-1, 1) < 0:
+                    ne_buff = ne - np.abs(np.random.normal()) * ne_errd
+                else:
+                    ne_buff = ne + np.abs(np.random.normal()) * ne_erru
+
+                if N_ann > 2:
+                    buff_param = samples[
+                        int(np.random.uniform(0, samples[:, 0].size)), :
+                    ]
+                    T0, contrast = buff_param
+                    te_buff = VPM_model_kT(tab_r, buff_param, R500)
+                    pe_buff = ne_buff * te_buff
+                    # P0, rp, a, b, c = buff_param
+                    # pe_buff = gNFW_model(tab_r, buff_param)
+                    # te_buff = pe_buff / ne_buff
+                    # dpdr = (
+                    #     -P0
+                    #     * (tab_r / rp) ** (-c)
+                    #     * (1 + (tab_r / rp) ** a) ** (-(a + b - c) / a)
+                    #     * (b * (tab_r / rp) ** a + c)
+                    #     / tab_r
+                    # )
+                else:
+                    te_buff = te + np.random.normal() * te_erru
+                    pe_buff = ne_buff * te_buff
+                    # dpdr = np.gradient(pe_buff, tab_r)
+
+                dTdr = np.gradient(te_buff, tab_r)
+                dndr = np.gradient(ne_buff, tab_r)
+
+                ke_buff = te_buff / ne_buff ** (2.0 / 3.0)
+                # Mhse_buff = (
+                #     -((tab_r * kpc2m) ** 2)
+                #     * (kev2pa * dpdr / kpc2m)
+                #     / (mu * mp * GN * ne_buff * 1e6)
+                #     / sol_mass
+                # )
+                Mhse_buff = (
+                -((tab_r * kpc2m) ** 2)
+                * (te_buff * kev2joule)
+                * ( ( (dTdr * kev2joule/ kpc2m)/ (te_buff*kev2joule)) + ((dndr * 1e6 / kpc2m) / (ne_buff*1e6)) )
+                / (mu * mp * GN)
+                / sol_mass
+                )
+
                 Mgas_buff = np.cumsum(
                     (
                         (4 * np.pi * (tab_r * kpc2m) ** 2 * ne_buff * 1e6 * mue * mp)

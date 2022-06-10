@@ -1146,19 +1146,32 @@ def plot_2D_posteriors(res_dir, N_ann):
                 plt.close()
 
         if N_ann > 2:
-            labels = [
+            if fit_kT_profile_directly:
+                labels = [
+                r"${kT_{0}\;\; [\mathrm{keV}]}$",
+                r"${T_{min}/T_{0}}$",
+                # r"${kT_{min}\;\; [\mathrm{keV}]}$"
+                ]
+
+                file_samples = mcmc_dir_kT + "MCMC_chains_clean.npz"
+                file_bfit = mcmc_dir_kT + "best_fit_params.npy"
+                fullpath = fig_dir + "MCMC_corner_plot_kT.pdf"
+            else:
+                labels = [
                 r"${P_{0}\;\; [\mathrm{keV\,cm^{-3}}]}$",
                 r"${r_{p}\;\; [\mathrm{kpc}]}$",
                 r"$a$",
                 r"$b$",
                 r"$c$",
-            ]
+                ]
 
-            file_samples = mcmc_dir_pe + "MCMC_chains_clean.npz"
+                file_samples = mcmc_dir_pe + "MCMC_chains_clean.npz"
+                file_bfit = mcmc_dir_pe + "best_fit_params.npy"
+                fullpath = fig_dir + "MCMC_corner_plot_pe.pdf"
+
             results = np.load(file_samples)
             samples = results["samp"]
 
-            file_bfit = mcmc_dir_pe + "best_fit_params.npy"
             best_fit_param = np.load(file_bfit)
             ndim = best_fit_param.size
 
@@ -1166,7 +1179,6 @@ def plot_2D_posteriors(res_dir, N_ann):
                 warnings.simplefilter("ignore")
                 samples = MCSamples(samples=samples)
                 samples.updateSettings({"contours": [0.68, 0.95]})
-                fullpath = fig_dir + "MCMC_corner_plot_pe.pdf"
                 with PdfPages(fullpath) as pdf:
                     g = plots.getSubplotPlotter()
                     g.settings.colormap = "gist_heat"
