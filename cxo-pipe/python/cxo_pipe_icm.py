@@ -921,7 +921,7 @@ def mcmc_ne(res_dir, Rproj, r_map, los_step_map, z, R500):
 
         param_ini = np.asarray([2e-2, 150.0, 0.1, 1.2, 1000.0, 3.0, 1.0])
 
-        ndim, nwalkers, nsteps = param_ini.size, 400, 250
+        ndim, nwalkers, nsteps = param_ini.size, 1500, 250
 
         n0 = np.random.uniform(0.0, 5.0 * param_ini[0], nwalkers)
         rc = np.random.uniform(0.0, 1000.0, nwalkers)

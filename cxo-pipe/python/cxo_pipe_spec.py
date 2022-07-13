@@ -177,7 +177,6 @@ def find_spec_annuli(
                     N_net = N_tot - N_B
 
                 outer_rad = max(outer_rad_counts, 1.2*inner_rad, inner_rad+1)
-                print('Setting a limit at {} pixels'.format(outer_rad))
                 if outer_rad > R500_pix:
                     outer_rad = R500_pix
                 inner_rad_tab.append(inner_rad)
@@ -656,10 +655,23 @@ def fit_spec(res_dir, obsids, z):
 
 def V06_model(args, x_tab, T_tab, T_tab_err, return_chi):
 
+#    T_model = (
+#        args[0]
+#        * (((x_tab / 0.045) ** 1.9 + args[1]) / ((x_tab / 0.045) ** 1.9 + 1.0))
+#        * (1.0 + (x_tab / 0.6) ** 2) ** (-0.45)
+#    )
+    T0 = args[0]
+    rcool = 0.05
+    acool = 2
+    Tmin = T0 * args[1]
+    rt = 1
+    a = 0
+    b = 3
+    c = 1
     T_model = (
-        args[0]
-        * (((x_tab / 0.045) ** 1.9 + args[1]) / ((x_tab / 0.045) ** 1.9 + 1.0))
-        * (1.0 + (x_tab / 0.6) ** 2) ** (-0.45)
+        T0
+        * (((x_tab / rcool) ** acool + Tmin / T0) / ((x_tab / rcool) ** acool + 1.0))
+        * ((x_tab / rt) ** -a / ((x_tab / rt) ** b + 1.0) ** (c / b))
     )
 
     if return_chi:

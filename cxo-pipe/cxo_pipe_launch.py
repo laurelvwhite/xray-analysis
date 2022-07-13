@@ -113,7 +113,7 @@ print("------------------------------------------------------------")
 plt.plot_icm_profiles(res_dir, file_ACCEPT, z)
 plt.plot_2D_posteriors(res_dir, N_ann, fit_kT_profile_directly)
 plt.adaptive_map(res_dir, z, R500)
-plt.compute_Aphot(res_dir, z, R500)
+plt.compute_Aphot(res_dir, z, R500, bkg_area, obsids)
 plt.cluster_id_card(res_dir, source_name, z)
 
 sp.call("cp param.py " + res_dir, shell=True)

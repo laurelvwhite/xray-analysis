@@ -22,6 +22,7 @@ from matplotlib.patches import Rectangle
 from matplotlib import ticker
 import astropy.constants as const
 import scipy.ndimage
+from ciao_contrib.runtool import *
 
 cosmo = FlatLambdaCDM(70.0, 0.3, Tcmb0=2.7255)
 
@@ -1069,7 +1070,7 @@ def plot_icm_profiles(res_dir, file_ACCEPT, z):
         )
 
 
-def plot_2D_posteriors(res_dir, N_ann):
+def plot_2D_posteriors(res_dir, N_ann, fit_kT_profile_directly):
     """
     Creates the MCMC triangle plots
 
@@ -1088,6 +1089,7 @@ def plot_2D_posteriors(res_dir, N_ann):
     mer_dir = res_dir + "/results/"
     mcmc_dir_ne = mer_dir + "MCMC_ne/"
     mcmc_dir_pe = mer_dir + "MCMC_pe/"
+    mcmc_dir_kT = mer_dir + "MCMC_kT/"
     fig_dir = mer_dir + "figures/"
 
     print(colored("Plotting 2D distributions...", "blue", None, ["bold"]))
@@ -1104,7 +1106,7 @@ def plot_2D_posteriors(res_dir, N_ann):
             r"${\beta}$",
             r"${r_{s}\;\; [\mathrm{kpc}]}$",
             r"${\epsilon}$",
-            r"${\mathrm{Bkg_scale}}$",
+            r"Bkg$_\mathrm{scale}$",
         ]
 
         file_samples = mcmc_dir_ne + "MCMC_chains_clean.npz"
@@ -1196,7 +1198,8 @@ def plot_2D_posteriors(res_dir, N_ann):
                         },
                     )
                     for i in range(ndim):
-                        g.subplots[ndim - 1, i].set_xlabel(labels[i], fontsize=14)
+                        g.subplots[ndim - 1,
+                            i].set_xlabel(labels[i], fontsize=14)
                         if i > 0:
                             g.subplots[i, 0].set_ylabel(labels[i], fontsize=14)
                             yax = g.subplots[i, 0].get_yaxis()
@@ -1265,7 +1268,7 @@ def adaptive_map(res_dir, z, R500):
         )
 
 
-def compute_Aphot(res_dir, z, R500):
+def compute_Aphot(res_dir, z, R500, bkg_area, obsids):
     """
     Computes the photon asymmetry  morphological indicator
     following Nurgaliev et al. 2013
@@ -1295,10 +1298,24 @@ def compute_Aphot(res_dir, z, R500):
         print(colored("Photon asymmetry already computed", "white", None, ["bold"]))
         print("------------------------------------------------------------")
     else:
+        tab_obsid = obsids.split(",")
+        blank_sky_file = mer_dir + "blank_sky_" + tab_obsid[0] + ".evt"
+
+        dmkeypar(blank_sky_file, 'EXPOSURE')
+        bkg_exp_time = float(dmkeypar.value)
+
+        bkg_count_file = mer_dir + "bkg_counts.txt"
+        with open(bkg_count_file) as f:
+            content = f.readlines()
+        bkg_counts = float(content[5][9:-1])
+        rate_bkg = bkg_counts / bkg_exp_time / bkg_area[0]
+
         map_file_small = mer_dir + "small_broad_thresh_nopts.img"
         hdu = fits.open(map_file_small)
         header = hdu[0].header
         map_small = hdu[0].data
+
+        rate_bkg *= header["exposure"]
 
         pix_reso = header["CDELT2"]
         sig_kernel = (
@@ -1329,13 +1346,6 @@ def compute_Aphot(res_dir, z, R500):
             r_xy = r_xy[:-1, :-1]
 
         ann_tab = np.array([0.05, 0.12, 0.2, 0.30, 1]) * theta_500_pix
-
-        wbkg = np.where((r_xy >= 1.1 * theta_500_pix) & (r_xy < 1.3 * theta_500_pix))
-        area_bkg = (
-            np.pi * (1.3 * theta_500_pix) ** 2 - np.pi * (1.1 * theta_500_pix) ** 2
-        )
-        N_bkg = np.sum(map_small[wbkg])
-        rate_bkg = N_bkg / area_bkg
 
         tab_C_k = []
         tab_dNC_k = []
