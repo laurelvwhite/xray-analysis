@@ -592,7 +592,7 @@ def fit_spec(res_dir, obsids, z):
                     ui.thaw(ui.xsapec.kt.redshift)
                     ui.set_par(ui.xsapec.kt.Abundanc, 0.3, 0, 2)
                     ui.thaw(ui.xsapec.kt.Abundanc)
-                    ui.set_par(ui.xsapec.kt.kt, 4, 0.008, 100)
+                    ui.set_par(ui.xsapec.kt.kt, 4, 0.008, 64)
                     ui.thaw(ui.xsapec.kt.kt)
                     ui.set_source(i, ui.xsphabs.nH * ui.xsapec.kt)
 
@@ -602,9 +602,9 @@ def fit_spec(res_dir, obsids, z):
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     if N_spec_reg == 1:
-                        ui.covar(kt.kt)
+                        ui.covar()
                     else:
-                        ui.covar(kt.kt)
+                        ui.covar()
 
                 i = 1
                 for obsid in tab_obsid:
@@ -987,5 +987,5 @@ def XSB_to_EM_coef(res_dir, obsids, z):
         file_save_res = cl_dir + "Tab_conv_results.fits"
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            fits.writeto(file_save_res, Te_tab, clobber=True)
-            fits.append(file_save_res, norm_tab, clobber=True)
+            fits.writeto(file_save_res, Te_tab, overwrite=True)
+            fits.append(file_save_res, norm_tab, overwrite=True)

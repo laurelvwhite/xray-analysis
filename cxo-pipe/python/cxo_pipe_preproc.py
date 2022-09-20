@@ -1306,7 +1306,7 @@ def X_ray_SB_profile(res_dir, obsids, z):
         d_a = cosmo.angular_diameter_distance(z).to("kpc").value
         Rmid_kpc = d_a * (Rmid * u.arcmin).to("radian").value
 
-        fits.writeto(mer_dir + "Sx_profile_MCMC.fits", Rmid, clobber=True)
+        fits.writeto(mer_dir + "Sx_profile_MCMC.fits", Rmid, overwrite=True)
         fits.append(mer_dir + "Sx_profile_MCMC.fits", Rmid_kpc, clobber=True)
         fits.append(mer_dir + "Sx_profile_MCMC.fits", XSB_prof_N, clobber=True)
         fits.append(mer_dir + "Sx_profile_MCMC.fits", XSB_prof_err_N, clobber=True)

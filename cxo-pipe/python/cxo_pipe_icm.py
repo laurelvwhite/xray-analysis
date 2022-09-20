@@ -2095,7 +2095,7 @@ def best_icm_models_kTdirect(res_dir, z, R500, N_ann, Ysz):
                     cl_dir + "/y_profile_MCMC.fits",
                     np.ones(10),
                     header=cluster_header,
-                    clobber=True,
+                    overwrite=True,
                 )
                 fits.append(
                     cl_dir + "/y_profile_MCMC.fits",
