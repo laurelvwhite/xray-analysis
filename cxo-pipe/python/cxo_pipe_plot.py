@@ -650,7 +650,7 @@ def profile_plot(
                 where=y_2high >= y_2low,
                 facecolor="#A8C2D8",
                 edgecolor="#A8C2D8",
-                interpolate=True,
+                #interpolate=True,
                 zorder=2,
                 alpha=0.8,
             )
@@ -661,7 +661,7 @@ def profile_plot(
                 where=y_high >= y_low,
                 facecolor="#6188AA",
                 edgecolor="#6188AA",
-                interpolate=True,
+                #interpolate=True,
                 zorder=2,
                 alpha=0.8,
             )
