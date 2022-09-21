@@ -184,24 +184,44 @@ def find_spec_annuli(
                 index_ring += 1
                 inner_rad = outer_rad
 
-            if index_ring == 1:
-                reg_file_name_i = cl_dir + "spec_annulus_" + str(index_ring) + ".reg"
-                reg_file_i = open(reg_file_name_i, "w")
-                reg_file_i.write("# Region file format: CIAO version 1.0\n")
-                reg_file_i.write(
-                    "annulus("
-                    + str(Xdepro)
-                    + ","
-                    + str(Ydepro)
-                    + ","
-                    + str(0.15 * R500_pix)
-                    + ","
-                    + str(R500_pix)
-                    + ")"
-                )
-                reg_file_i.close()
-                inner_rad_tab = [0.15 * R500_pix]
-                outer_rad_tab = [R500_pix]
+#            if index_ring == 1:
+#                reg_file_name_i = cl_dir + "spec_annulus_" + str(index_ring) + ".reg"
+#                reg_file_i = open(reg_file_name_i, "w")
+#                reg_file_i.write("# Region file format: CIAO version 1.0\n")
+#                reg_file_i.write(
+#                    "annulus("
+#                    + str(Xdepro)
+#                    + ","
+#                    + str(Ydepro)
+#                    + ","
+#                    + str(0.15 * R500_pix)
+#                    + ","
+#                    + str(R500_pix)
+#                    + ")"
+#                )
+#                reg_file_i.close()
+#                inner_rad_tab = [0.15 * R500_pix]
+#                outer_rad_tab = [R500_pix]
+
+            if index_ring <= 5:
+                inner_rad_tab = [0, 0.05 * R500_pix, 0.1 * R500_pix, 0.15 * R500_pix, 0.4 * R500_pix]
+                outer_rad_tab = [0.05 * R500_pix, 0.1 * R500_pix, 0.15 * R500_pix, 0.4* R500_pix, R500_pix]
+                for i in range(1,6):
+                    reg_file_name_i = cl_dir + "spec_annulus_" + str(i) + ".reg"
+                    reg_file_i = open(reg_file_name_i, "w")
+                    reg_file_i.write("# Region file format: CIAO version 1.0\n")
+                    reg_file_i.write(
+                        "annulus("
+                        + str(Xdepro)
+                        + ","
+                        + str(Ydepro)
+                        + ","
+                        + str(inner_rad_tab[i-1])
+                        + ","
+                        + str(outer_rad_tab[i-1])
+                        + ")"
+                    )
+                    reg_file_i.close()
 
         reg_file_name = cl_dir + "spec_annuli.reg"
         reg_file = open(reg_file_name, "w")
@@ -544,7 +564,7 @@ def fit_spec(res_dir, obsids, z):
             SNR_bin = 3
             T_max = 100.0
 
-            while (SNR_bin < 10) & (buff_T_err / buff_T == 1.0) | (T_max > 30.0):
+            while (SNR_bin < 8) & (buff_T_err / buff_T == 1.0) | (T_max > 30.0):
                 ui.clean()
                 fit_ind = 1
                 for obsid in tab_obsid:

@@ -1,7 +1,7 @@
-source_name = "PSZ2G000.13+78.04"
-obsids = "17159"
-z = 0.171000
-R500 = 1150.3347423779778
+source_name = "PSZ2G003.91-42.03"
+obsids = "observations,were,found,for,ra=316.467,dec=-38.7532"
+z = 0.152100
+R500 = 1126.4275457498702
 use_peak = True
 fixed_coord = None
 fast_annuli = True
