@@ -203,10 +203,10 @@ def find_spec_annuli(
 #                inner_rad_tab = [0.15 * R500_pix]
 #                outer_rad_tab = [R500_pix]
 
-            if index_ring <= 5:
-                inner_rad_tab = [0, 0.05 * R500_pix, 0.1 * R500_pix, 0.15 * R500_pix, 0.4 * R500_pix]
-                outer_rad_tab = [0.05 * R500_pix, 0.1 * R500_pix, 0.15 * R500_pix, 0.4* R500_pix, R500_pix]
-                for i in range(1,6):
+            if index_ring <= 6:
+                inner_rad_tab = [0, 0.05 * R500_pix, 0.1 * R500_pix, 0.15 * R500_pix, 0.28231081 * R500_pix, 0.53132928 * R500_pix]
+                outer_rad_tab = [0.05 * R500_pix, 0.1 * R500_pix, 0.15 * R500_pix, 0.28231081 * R500_pix, 0.53132928 * R500_pix, R500_pix]
+                for i in range(1,7):
                     reg_file_name_i = cl_dir + "spec_annulus_" + str(i) + ".reg"
                     reg_file_i = open(reg_file_name_i, "w")
                     reg_file_i.write("# Region file format: CIAO version 1.0\n")

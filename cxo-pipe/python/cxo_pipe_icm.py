@@ -139,10 +139,19 @@ def VPM_model_kT(r, param, R500):
         x = r/R500
 
         # T0, Tmin/T0 = param
+#        model = (
+#            param[0]
+#            * (((x / 0.045) ** 1.9 + param[1]) / ((x / 0.045) ** 1.9 + 1.0))
+#            * (1.0 + (x / 0.6) ** 2) ** (-0.45)
+#        )
+
+        # Average profile
+        # Tmg, 5 other parameters
+        Tmg = param[0]
         model = (
-            param[0]
-            * (((x / 0.045) ** 1.9 + param[1]) / ((x / 0.045) ** 1.9 + 1.0))
-            * (1.0 + (x / 0.6) ** 2) ** (-0.45)
+            Tmg
+            * 1.35 * ((x / param[1]) ** param[2] + param[3]) / ((x / param[1]) ** param[2] + 1.0)
+            * 1.0 / (1 + (x / param[4]) **2) ** param[5]
         )
 
         # # T0, Tmin, rcool, acool, rt, a, b, c = param
@@ -543,25 +552,19 @@ def ln_prior_kT(param, r_test, VPM_param, R500):
 
     """
 
-    T0, contrast = param
+#    T0, contrast = param
     # T0, Tmin = param
+    Tmg, rcool, acool, contrast, rt, c = param
 
     check_term = 0.0
     if (
-        T0 > 0
-        and T0 < 20
+        Tmg > 0
+        and Tmg < 20
         and contrast > 0
         # and contrast <= 1
         ):
         check_term += 1
 
-    # if (
-    #     T0 > 0
-    #     and T0 < 20
-    #     and Tmin > 0
-    #     and Tmin < 10
-    #     ):
-    #     check_term += 1
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
@@ -1131,21 +1134,32 @@ def mcmc_kT(res_dir, R500):
 
 
         mean_ICM_T = np.mean(Tx_data)
+        rcool_ini = 0.045
+        acool_ini = 1.9
         kT_contrast = Tx_data[0]/(1.35*mean_ICM_T)
+        rt_ini = 0.6
+        c_ini = 0.45
         # kT_min = Tx_data[0]
 
-        param_ini = np.asarray([ 1.35*mean_ICM_T, kT_contrast ])
+#        param_ini = np.asarray([ 1.35*mean_ICM_T, kT_contrast ])
+        param_ini = np.asarray([1.35 * mean_ICM_T, rcool_ini, acool_ini, kT_contrast, rt_ini, c_ini])
 
         ndim, nwalkers, nsteps = param_ini.size, 400, 500
 
-        T0       = np.random.uniform(0.75 * param_ini[0], 1.25 * param_ini[0], nwalkers)
+#        T0       = np.random.uniform(0.75 * param_ini[0], 1.25 * param_ini[0], nwalkers)
         # Tmin     = np.random.uniform(np.max([0.0, param_ini[1] - Tx_data_err[0]]), param_ini[1] + Tx_data_err[0], nwalkers)
-        contrast = np.random.uniform(0.001, np.min([1.0, 2.0 * param_ini[1]]), nwalkers)
-        pos_tab  = np.vstack((T0, contrast)).T
+#        contrast = np.random.uniform(0.001, np.min([1.0, 2.0 * param_ini[1]]), nwalkers)
+        Tmg = np.random.uniform(0.75 * param_ini[0], 1.25 * param_ini[0], nwalkers)
+        rcool = 10 ** np.random.uniform(np.log10(0.01), np.log10(0.25), nwalkers)
+        acool = np.random.uniform(-0.2, 0.2, nwalkers)
+        contrast = np.random.uniform(0.001, np.min([1.0, 2.0 * param_ini[3]]), nwalkers)
+        rt = 10 ** np.random.uniform(np.log10(0.1), np.log10(5), nwalkers)
+        c = np.random.uniform(0, 2, nwalkers)
+        pos_tab = np.vstack((Tmg, rcool, acool, contrast, rt, c)).T
+#        pos_tab  = np.vstack((T0, contrast)).T
 
         pos_tab[-1, :] = param_ini
         pos = pos_tab.tolist()
-
 
         args_lnprob = [
             theta,
@@ -1895,7 +1909,8 @@ def best_icm_models_kTdirect(res_dir, z, R500, N_ann, Ysz):
                     buff_param = samples[
                         int(np.random.uniform(0, samples[:, 0].size)), :
                     ]
-                    T0, contrast = buff_param
+                    #T0, contrast = buff_param
+                    Tmg, rcool, acool, contrast, rt, c = buff_param
                     te_buff = VPM_model_kT(tab_r, buff_param, R500)
                     pe_buff = ne_buff * te_buff
                     # P0, rp, a, b, c = buff_param
