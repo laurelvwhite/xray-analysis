@@ -71,12 +71,12 @@ def expcorrect(indir,obsids):
 
             blanksky_image.punlearn()
             blanksky_image.bkgfile = bkg_img
-            blanksky_image.outroot = outdir + '{}_bkg_img'.format()
+            blanksky_image.outroot = outdir + '{}_bkg_img'.format(obsid)
             blanksky_image.imgfile = cts_img_no_pts
             blanksky_image.clobber = True
             blanksky_image()
 
-            with fits.open(outdit + '{}_bkg_img_particle_bgnd.img'.format(obsid)) as f:
+            with fits.open(outdir + '{}_bkg_img_particle_bgnd.img'.format(obsid)) as f:
                 bkg_arr = np.array(f[0].data)
                 bkg_hdr = f[0].header
 
@@ -98,6 +98,30 @@ def expcorrect(indir,obsids):
         fits.writeto(corr_cts_img, corr_cts, hdr, overwrite=True)
         fits.writeto(corr_bkg_cts_img, corr_bkg_cts, bkg_hdr, overwrite=True)
 
+def bkgrate(indir):
+    outdir = indir + 'aphot/'
+    bkg_img = outdir + 'corrected_bkg_counts.img'
+    bkg_reg_file = outdir + 'bkg.reg'
+
+    with open(bkg_reg_file, 'r') as f:
+        line = f.readlines()[0]
+
+    center_x = line.split('(')[1].split(',')[0]
+    center_y = line.split('(')[1].split(',')[1]
+    radius = float(line.split(',')[2].split(')')[0])
+
+    area = np.pi*radius**2
+
+    dmstat.punlearn()
+    dmstat.infile = '{}[sky=region({})]'.format(bkg_img,bkg_reg_file)
+    dmstat.centroid = 'no'
+    dmstat()
+
+    total = float(dmstat.out_sum)
+    bkgrate = total/area
+
+    return bkgrate
+
 #indir = '../../results/PSZ2G021.10+33.24/results/'
 #obsids = [6104,7940]
 
@@ -105,4 +129,5 @@ indir = '../../results/PSZ2G000.13+78.04/results/'
 obsids = [17159]
 
 expcorrect(indir,obsids)
+print(bkgrate(indir))
 
