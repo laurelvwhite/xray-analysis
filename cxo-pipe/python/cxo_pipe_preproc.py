@@ -29,7 +29,7 @@ def import_data(obsids, res_dir):
     Returns
     _______
     Folders in the current working directory containing the data,
-    using the obsids as forlder names
+    using the obsids as folder names
 
     """
 
@@ -90,6 +90,7 @@ def reprocess_data(obsids, res_dir):
             )
             print("------------------------------------------------------------")
         except IndexError:
+            print(obsid)
             sp.call(["bash", "shell/reprocess_data.sh", obsid, repro_dir])
             sp.call("rm -rf " + obsid, shell=True)
 
