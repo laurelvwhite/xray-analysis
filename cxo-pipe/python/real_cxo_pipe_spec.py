@@ -640,29 +640,29 @@ def fit_spec(res_dir, obsids, z):
                 elif ind_ann == 11:
                     apec_model = ui.xsapec.kt11
                 elif ind_ann == 12:
-                    apec_model = ui.xsapec.kt12
+                    apec_model = ui.xsapec.kt10
                 elif ind_ann == 13:
-                    apec_model = ui.xsapec.kt13
+                    apec_model = ui.xsapec.kt10
                 elif ind_ann == 14:
-                    apec_model = ui.xsapec.kt14
+                    apec_model = ui.xsapec.kt10
                 elif ind_ann == 15:
-                    apec_model = ui.xsapec.kt15
+                    apec_model = ui.xsapec.kt10
                 elif ind_ann == 16:
-                    apec_model = ui.xsapec.kt16
+                    apec_model = ui.xsapec.kt10
                 elif ind_ann == 17:
-                    apec_model = ui.xsapec.kt17
+                    apec_model = ui.xsapec.kt10
                 elif ind_ann == 18:
-                    apec_model = ui.xsapec.kt18
+                    apec_model = ui.xsapec.kt10
                 elif ind_ann == 19:
-                    apec_model = ui.xsapec.kt19
+                    apec_model = ui.xsapec.kt10
                 elif ind_ann == 20:
-                    apec_model = ui.xsapec.kt20
+                    apec_model = ui.xsapec.kt10
                 ui.xsphabs.nH.nH = nH_val
                 ui.freeze(ui.xsphabs.nH.nH)
                 ui.set_par(apec_model.redshift, z, z-0.01, z+0.01)
                 ui.thaw(apec_model.redshift)
-                ui.set_par(apec_model.Abundanc, 0.3, 0, 2)
-                ui.thaw(apec_model.Abundanc)
+                ui.set_par(apec_model.redshift, 0.3, 0, 2)
+                ui.thaw(apec_model.redshift)
                 ui.set_par(apec_model.kt, 4, 0.008, 64)
                 ui.thaw(apec_model.kt)
                 ui.set_par(ui.xsapec.bkg1.kt, 0.18)
@@ -686,6 +686,7 @@ def fit_spec(res_dir, obsids, z):
 
             renorm()
 
+            #ui.set_method('levmar')
             ui.fit()
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -693,13 +694,10 @@ def fit_spec(res_dir, obsids, z):
 #                    ui.covar()
 #                else:
 #                    ui.covar()
-                ui.set_conf_opt('max_rstat', 100)
-                print(ui.get_conf_opt())
-                ui.set_conf_opt('maxiters', 100)
-                print('Running errors...')
+                #ui.set_covar_opt('maxiters',10000)
+                #ui.set_conf_opt('max_rstat', 10)
                 #ui.conf()
                 ui.covar()
-                print('Done!')
 
             i = 1
             for ind_ann in tqdm(range(1, N_spec_reg + 1)):
@@ -729,9 +727,9 @@ def fit_spec(res_dir, obsids, z):
                         data.append(j+1)
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
-                    ## CHANGE FOR CONF
                     ui.covar(data[0],data.pop(0))
                 final_res = ui.get_covar_results()
+                print(final_res.parvals)
 
                 ICM_T_tab[ind_ann - 1] = final_res.parvals[0]
                 buff_T = final_res.parvals[0]
@@ -749,9 +747,9 @@ def fit_spec(res_dir, obsids, z):
                     ICM_T_tab_err[ind_ann - 1] = final_res.parmaxes[0]
                     buff_T_err = final_res.parmaxes[0]
 
-                #if buff_T_err / buff_T < 0.05:
-                #    ICM_T_tab_err[ind_ann - 1] = 0.15 * buff_T
-                #    buff_T_err = 0.15 * buff_T
+                if buff_T_err / buff_T < 0.05:
+                    ICM_T_tab_err[ind_ann - 1] = 0.15 * buff_T
+                    buff_T_err = 0.15 * buff_T
 
                 SNR_bin += 1
 
@@ -843,10 +841,8 @@ def fit_T_prof(res_dir, R500, z):
         std_T = np.std(T_prof)
         for i in range(T_prof_err.size):
             T_err_i = T_prof_err[i]
-            #T_err_i = np.sqrt(T_prof_err[i]**2 + (0.15 * T_prof[i])**2)
-            #if T_err_i < std_T / 5.0:
-            #    T_prof_err[i] = std_T
-            
+            if T_err_i < std_T / 5.0:
+                T_prof_err[i] = std_T
 
         file_ann = cl_dir + "spec_annuli.reg"
         with open(file_ann) as f:
@@ -862,6 +858,7 @@ def fit_T_prof(res_dir, R500, z):
 
             rad_ann = np.array(rad_ann)
             rad_ann_mid = ((rad_ann + np.roll(rad_ann, -1)) / 2.0)[:-1]
+            print(rad_ann_mid)
             rad_ann_mid_R500 = rad_ann_mid / R500
             rad_ann_err = rad_ann_mid - rad_ann[:-1]
 

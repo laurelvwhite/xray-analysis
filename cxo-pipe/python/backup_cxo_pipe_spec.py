@@ -184,29 +184,29 @@ def find_spec_annuli(
                 index_ring += 1
                 inner_rad = outer_rad
 
-            if len(inner_rad_tab) <= 6:
+#            if index_ring == 1:
+#                reg_file_name_i = cl_dir + "spec_annulus_" + str(index_ring) + ".reg"
+#                reg_file_i = open(reg_file_name_i, "w")
+#                reg_file_i.write("# Region file format: CIAO version 1.0\n")
+#                reg_file_i.write(
+#                    "annulus("
+#                    + str(Xdepro)
+#                    + ","
+#                    + str(Ydepro)
+#                    + ","
+#                    + str(0.15 * R500_pix)
+#                    + ","
+#                    + str(R500_pix)
+#                    + ")"
+#                )
+#                reg_file_i.close()
+#                inner_rad_tab = [0.15 * R500_pix]
+#                outer_rad_tab = [R500_pix]
+
+            if index_ring <= 6:
                 inner_rad_tab = [0, 0.05 * R500_pix, 0.1 * R500_pix, 0.15 * R500_pix, 0.28231081 * R500_pix, 0.53132928 * R500_pix]
                 outer_rad_tab = [0.05 * R500_pix, 0.1 * R500_pix, 0.15 * R500_pix, 0.28231081 * R500_pix, 0.53132928 * R500_pix, R500_pix]
                 for i in range(1,7):
-                    reg_file_name_i = cl_dir + "spec_annulus_" + str(i) + ".reg"
-                    reg_file_i = open(reg_file_name_i, "w")
-                    reg_file_i.write("# Region file format: CIAO version 1.0\n")
-                    reg_file_i.write(
-                        "annulus("
-                        + str(Xdepro)
-                        + ","
-                        + str(Ydepro)
-                        + ","
-                        + str(inner_rad_tab[i-1])
-                        + ","
-                        + str(outer_rad_tab[i-1])
-                        + ")"
-                    )
-                    reg_file_i.close()
-            elif len(inner_rad_tab) > 20:
-                inner_rad_tab = np.array([0, 0.03, 0.06, 0.09, 0.12, 0.15, 0.17022311, 0.1931727,  0.21921638, 0.24877129, 0.28231081, 0.32037215, 0.36356495, 0.41258103, 0.46820549, 0.53132928, 0.60296347, 0.68425543, 0.77650723, 0.88119647]) * R500_pix
-                outer_rad_tab = np.array([0.03, 0.06, 0.09, 0.12, 0.15, 0.17022311, 0.1931727,  0.21921638, 0.24877129, 0.28231081, 0.32037215, 0.36356495, 0.41258103, 0.46820549, 0.53132928, 0.60296347, 0.68425543, 0.77650723, 0.88119647, 1.0]) * R500_pix
-                for i in range(1,21):
                     reg_file_name_i = cl_dir + "spec_annulus_" + str(i) + ".reg"
                     reg_file_i = open(reg_file_name_i, "w")
                     reg_file_i.write("# Region file format: CIAO version 1.0\n")
@@ -556,32 +556,23 @@ def fit_spec(res_dir, obsids, z):
         ICM_T_tab = np.zeros(N_spec_reg)
         ICM_T_tab_err = np.zeros(N_spec_reg)
         tab_area_bkg = [0]
-        tab_area = [0]
 
-        buff_T_err = 1.0
-        buff_T = 1.0
-        SNR_bin = 3
-        T_max = 100.0
+        for ind_ann in tqdm(range(1, N_spec_reg + 1)):
 
-        while (SNR_bin < 8) & (buff_T_err / buff_T == 1.0) | (T_max > 30.0):
-            ui.clean()
-            fit_ind = 1
-            indices = []
-            for ind_ann in tqdm(range(1, N_spec_reg + 1)):
-                reg_file_name_i = cl_dir + "spec_annulus_" + str(ind_ann) + ".reg"
-                with open(reg_file_name_i) as f:
-                    region = f.readlines()[1]
-                inner = float(region.split(",")[2])
-                outer = float(region.split(",")[3].split(")")[0])
+            buff_T_err = 1.0
+            buff_T = 1.0
+            SNR_bin = 3
+            T_max = 100.0
+
+            while (SNR_bin < 8) & (buff_T_err / buff_T == 1.0) | (T_max > 30.0):
+                ui.clean()
+                fit_ind = 1
                 for obsid in tab_obsid:
-                    indices.append(ind_ann)
                     file_area_bkg = mer_dir + "bkg_area_" + obsid + ".txt"
                     with open(file_area_bkg) as f:
                         content = f.readlines()
                     area_bkg = float(content[0])
                     tab_area_bkg.append(area_bkg)
-                    area_ann = np.pi*(outer**2 - inner**2)
-                    tab_area.append(area_ann)
                     ui.load_data(
                         fit_ind,
                         cl_dir + "cl_spectrum_" + obsid + "_" + str(ind_ann) + ".pi",
@@ -592,117 +583,50 @@ def fit_spec(res_dir, obsids, z):
                     )
                     fit_ind += 1
 
-            for i in range(1, fit_ind):
-                full_spec = ui.get_data_plot(i)
-                particle_spec = ui.get_bkg(i)
-                wscale = np.where((full_spec.x > 9) & (full_spec.x < 12))
-                newscale = np.trapz(
-                    ui.get_counts(i)[wscale], full_spec.x[wscale]
-                ) / np.trapz(particle_spec.counts[wscale], full_spec.x[wscale])
-                if newscale != 0:
-                    area_scale = ui.get_backscal(i)
-                    bkg_scale = ui.get_bkg_scale(i)
-                    ui.set_backscal(i, area_scale * newscale / bkg_scale)
-                ui.group_snr(i, SNR_bin)
+                for i in range(1, fit_ind):
+                    full_spec = ui.get_data_plot(i)
+                    particle_spec = ui.get_bkg(i)
+                    wscale = np.where((full_spec.x > 9) & (full_spec.x < 12))
+                    newscale = np.trapz(
+                        ui.get_counts(i)[wscale], full_spec.x[wscale]
+                    ) / np.trapz(particle_spec.counts[wscale], full_spec.x[wscale])
+                    if newscale != 0:
+                        area_scale = ui.get_backscal(i)
+                        bkg_scale = ui.get_bkg_scale(i)
+                        ui.set_backscal(i, area_scale * newscale / bkg_scale)
+                    ui.group_snr(i, SNR_bin)
 
-            if (T_max != 100.0) & (T_max > 30.0):
-                ui.notice(0.7, 7)
-            else:
-                ui.notice(0.7, 12)
+                if (T_max != 100.0) & (T_max > 30.0):
+                    ui.notice(0.7, 7)
+                else:
+                    ui.notice(0.7, 12)
 
-            ui.set_stat("wstat")
+                ui.set_stat("wstat")
 
-            nH_val = float(np.load(mer_dir + "nH_value.npy"))
+                nH_val = float(np.load(mer_dir + "nH_value.npy"))
 
-            for i in range(1, fit_ind):
-                ind_ann = indices[i-1]
-                area_ratio = tab_area[i]/tab_area[1]
-                if ind_ann == 1:
-                    apec_model = ui.xsapec.kt1
-                elif ind_ann == 2:
-                    apec_model = ui.xsapec.kt2
-                elif ind_ann == 3:
-                    apec_model = ui.xsapec.kt3
-                elif ind_ann == 4:
-                    apec_model = ui.xsapec.kt4
-                elif ind_ann == 5:
-                    apec_model = ui.xsapec.kt5
-                elif ind_ann == 6:
-                    apec_model = ui.xsapec.kt6
-                elif ind_ann == 7:
-                    apec_model = ui.xsapec.kt7
-                elif ind_ann == 8:
-                    apec_model = ui.xsapec.kt8
-                elif ind_ann == 9:
-                    apec_model = ui.xsapec.kt9
-                elif ind_ann == 10:
-                    apec_model = ui.xsapec.kt10
-                elif ind_ann == 11:
-                    apec_model = ui.xsapec.kt11
-                elif ind_ann == 12:
-                    apec_model = ui.xsapec.kt12
-                elif ind_ann == 13:
-                    apec_model = ui.xsapec.kt13
-                elif ind_ann == 14:
-                    apec_model = ui.xsapec.kt14
-                elif ind_ann == 15:
-                    apec_model = ui.xsapec.kt15
-                elif ind_ann == 16:
-                    apec_model = ui.xsapec.kt16
-                elif ind_ann == 17:
-                    apec_model = ui.xsapec.kt17
-                elif ind_ann == 18:
-                    apec_model = ui.xsapec.kt18
-                elif ind_ann == 19:
-                    apec_model = ui.xsapec.kt19
-                elif ind_ann == 20:
-                    apec_model = ui.xsapec.kt20
-                ui.xsphabs.nH.nH = nH_val
-                ui.freeze(ui.xsphabs.nH.nH)
-                ui.set_par(apec_model.redshift, z, z-0.01, z+0.01)
-                ui.thaw(apec_model.redshift)
-                ui.set_par(apec_model.Abundanc, 0.3, 0, 2)
-                ui.thaw(apec_model.Abundanc)
-                ui.set_par(apec_model.kt, 4, 0.008, 64)
-                ui.thaw(apec_model.kt)
-                ui.set_par(ui.xsapec.bkg1.kt, 0.18)
-                ui.freeze(ui.xsapec.bkg1.kt)
-                ui.set_par(ui.xsapec.bkg1.redshift, 0)
-                ui.freeze(ui.xsapec.bkg1.redshift)
-                ui.set_par(ui.xsapec.bkg1.Abundanc, 1)
-                ui.freeze(ui.xsapec.bkg1.Abundanc)
-                ui.set_par(ui.xsapec.bkg1.norm, 1, min=0, max=1e24)
-                ui.thaw(ui.xsapec.bkg1.norm)
-                ui.set_par(ui.xsapec.bkg2.kt, 0.18)
-                ui.freeze(ui.xsapec.bkg2.kt)
-                ui.set_par(ui.xsapec.bkg2.redshift, 0)
-                ui.freeze(ui.xsapec.bkg2.redshift)
-                ui.set_par(ui.xsapec.bkg2.Abundanc, 1)
-                ui.freeze(ui.xsapec.bkg2.Abundanc)
-                ui.set_par(ui.xsapec.bkg2.norm, 1, min=0, max=1e24)
-                ui.thaw(ui.xsapec.bkg2.norm)
-                #ui.set_source(i, ui.xsphabs.nH * apec_model + area_ratio * ui.xsapec.bkg1 - area_ratio * ui.xsapec.bkg2)
-                ui.set_source(i, ui.xsphabs.nH * apec_model)
+                for i in range(1, fit_ind):
+                    ui.xsphabs.nH.nH = nH_val
+                    ui.freeze(ui.xsphabs.nH.nH)
+                    ui.set_par(ui.xsapec.kt.redshift, z, z-0.01, z+0.01)
+                    ui.thaw(ui.xsapec.kt.redshift)
+                    ui.set_par(ui.xsapec.kt.Abundanc, 0.3, 0, 2)
+                    ui.thaw(ui.xsapec.kt.Abundanc)
+                    ui.set_par(ui.xsapec.kt.kt, 4, 0.008, 64)
+                    ui.thaw(ui.xsapec.kt.kt)
+                    ui.set_source(i, ui.xsphabs.nH * ui.xsapec.kt)
 
-            renorm()
+                renorm()
 
-            ui.fit()
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-#                if N_spec_reg == 1:
-#                    ui.covar()
-#                else:
-#                    ui.covar()
-                ui.set_conf_opt('max_rstat', 100)
-                print(ui.get_conf_opt())
-                ui.set_conf_opt('maxiters', 100)
-                print('Running errors...')
-                #ui.conf()
-                ui.covar()
-                print('Done!')
+                ui.fit()
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    if N_spec_reg == 1:
+                        ui.covar()
+                    else:
+                        ui.covar()
 
-            i = 1
-            for ind_ann in tqdm(range(1, N_spec_reg + 1)):
+                i = 1
                 for obsid in tab_obsid:
                     spec_fit = copy.deepcopy(ui.get_fit_plot(i))
                     save_spec = (
@@ -719,19 +643,10 @@ def fit_spec(res_dir, obsids, z):
                     )
                     i += 1
 
-#                if N_spec_reg == 1:
-#                    final_res = ui.get_covar_results()
-#                else:
-#                    final_res = ui.get_covar_results()
-                data = []
-                for j in range(len(indices)):
-                    if indices[j] == ind_ann:
-                        data.append(j+1)
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    ## CHANGE FOR CONF
-                    ui.covar(data[0],data.pop(0))
-                final_res = ui.get_covar_results()
+                if N_spec_reg == 1:
+                    final_res = ui.get_covar_results()
+                else:
+                    final_res = ui.get_covar_results()
 
                 ICM_T_tab[ind_ann - 1] = final_res.parvals[0]
                 buff_T = final_res.parvals[0]
@@ -749,9 +664,9 @@ def fit_spec(res_dir, obsids, z):
                     ICM_T_tab_err[ind_ann - 1] = final_res.parmaxes[0]
                     buff_T_err = final_res.parmaxes[0]
 
-                #if buff_T_err / buff_T < 0.05:
-                #    ICM_T_tab_err[ind_ann - 1] = 0.15 * buff_T
-                #    buff_T_err = 0.15 * buff_T
+                if buff_T_err / buff_T < 0.05:
+                    ICM_T_tab_err[ind_ann - 1] = 0.15 * buff_T
+                    buff_T_err = 0.15 * buff_T
 
                 SNR_bin += 1
 
@@ -843,10 +758,8 @@ def fit_T_prof(res_dir, R500, z):
         std_T = np.std(T_prof)
         for i in range(T_prof_err.size):
             T_err_i = T_prof_err[i]
-            #T_err_i = np.sqrt(T_prof_err[i]**2 + (0.15 * T_prof[i])**2)
-            #if T_err_i < std_T / 5.0:
-            #    T_prof_err[i] = std_T
-            
+            if T_err_i < std_T / 5.0:
+                T_prof_err[i] = std_T
 
         file_ann = cl_dir + "spec_annuli.reg"
         with open(file_ann) as f:
@@ -862,6 +775,7 @@ def fit_T_prof(res_dir, R500, z):
 
             rad_ann = np.array(rad_ann)
             rad_ann_mid = ((rad_ann + np.roll(rad_ann, -1)) / 2.0)[:-1]
+            print(rad_ann_mid)
             rad_ann_mid_R500 = rad_ann_mid / R500
             rad_ann_err = rad_ann_mid - rad_ann[:-1]
 

@@ -1036,7 +1036,7 @@ def mcmc_pe(res_dir):
 
         param_ini = np.asarray([8.4e-2, 850.0, 1.0510, 5.4905, 0.3081])
 
-        ndim, nwalkers, nsteps = param_ini.size, 400, 500
+        ndim, nwalkers, nsteps = param_ini.size, 800, 500
 
         P0 = np.random.uniform(0.0, 5.0 * param_ini[0], nwalkers)
         rp = np.random.uniform(0.0, 5000.0, nwalkers)
@@ -1063,7 +1063,7 @@ def mcmc_pe(res_dir):
         min_chi2_chains = np.argsort(chi2_chains[:, -1])
         param_chains = sampler.chain
 
-        ndim, nwalkers, nsteps = param_ini.size, 15, 10000
+        ndim, nwalkers, nsteps = param_ini.size, 30, 10000
         pos = param_chains[min_chi2_chains[0:nwalkers], -1, :].tolist()
         sampler = mcmc_sampler_pe(pos, ndim, nwalkers, nsteps, args_lnprob)
 
@@ -1151,7 +1151,7 @@ def mcmc_kT(res_dir, R500):
 #        param_ini = np.asarray([1.35 * mean_ICM_T, rcool_ini, acool_ini, kT_contrast, rt_ini, c_ini])
         param_ini = np.asarray([1.35 * mean_ICM_T, rcool_ini, acool_ini, kT_contrast, rt_ini])
 
-        ndim, nwalkers, nsteps = param_ini.size, 8000, 1000
+        ndim, nwalkers, nsteps = param_ini.size, 400, 250
 
 ## FIT
 
@@ -1185,7 +1185,7 @@ def mcmc_kT(res_dir, R500):
         min_chi2_chains = np.argsort(chi2_chains[:, -1])
         param_chains = sampler.chain
 
-        ndim, nwalkers, nsteps = param_ini.size, 2000, 20000
+        ndim, nwalkers, nsteps = param_ini.size, 15, 10000
         pos = param_chains[min_chi2_chains[0:nwalkers], -1, :].tolist()
         sampler = mcmc_sampler_kT(pos, ndim, nwalkers, nsteps, args_lnprob)
 

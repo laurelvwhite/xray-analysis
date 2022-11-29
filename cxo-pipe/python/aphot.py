@@ -1,5 +1,6 @@
 import os
 import time
+import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -8,6 +9,7 @@ import subprocess as sp
 from astropy.io import fits
 from ciao_contrib.runtool import *
 from cosmocalc import cosmocalc
+from scipy import stats as st
 
 def getR500inpixels(z,R500):
     z = float(z)
@@ -18,7 +20,7 @@ def getR500inpixels(z,R500):
     R500_pixels = R500_arcsec / 0.492
     return R500_pixels
 
-def expcorrect(indir,obsids):
+def expcorrect(indir,obsids,frac):
     outdir = indir + 'aphot/'
     if not os.path.isdir(outdir):
         os.mkdir(outdir)
@@ -60,47 +62,52 @@ def expcorrect(indir,obsids):
         with fits.open(exp_map) as f:
             exp_arr = np.array(f[0].data)
 
-        ## Randomly select half of pixels
-        xs = []
-        ys = []
-        indices = []
-        i = 0
-        for x in range(arr.shape[0]):
-            for y in range(arr.shape[1]):
-                for z in range(arr[x][y]):
-                    xs.append(x)
-                    ys.append(y)
-                    indices.append(i)
-                    i += 1
-        nchoices = int(len(indices)/2)
-        choices = np.random.choice(indices, size=nchoices, replace=False)
-        new_arr = np.zeros_like(arr)
-        for choice in choices:
-            new_arr[xs[choice]][ys[choice]] += 1
+        if frac == 1.0:
+            new_arr = arr
+            new_bkg_arr = bkg_arr
+        else:
+            ## Randomly select half of pixels
+            xs = []
+            ys = []
+            indices = []
+            i = 0
+            for x in range(arr.shape[0]):
+                for y in range(arr.shape[1]):
+                    for z in range(arr[x][y]):
+                        xs.append(x)
+                        ys.append(y)
+                        indices.append(i)
+                        i += 1
+            nchoices = int(len(indices)*frac)
+            choices = np.random.choice(indices, size=nchoices, replace=False)
+            new_arr = np.zeros_like(arr)
+            for choice in choices:
+                new_arr[xs[choice]][ys[choice]] += 1
 
-        ## Repeat for background
-        bkg_arr *= 1000
-        xs = []
-        ys = []
-        indices = []
-        i = 0
-        for x in range(bkg_arr.shape[0]):
-            for y in range(bkg_arr.shape[1]):
-                for z in range(int(bkg_arr[x][y])):
-                    xs.append(x)
-                    ys.append(y)
-                    indices.append(i)
-                    i += 1
-        nchoices = int(len(indices)/2)
-        choices = np.random.choice(indices, size=nchoices, replace=False)
-        new_bkg_arr = np.zeros_like(bkg_arr)
-        for choice in choices:
-            new_bkg_arr[xs[choice]][ys[choice]] += 1
-        new_bkg_arr /= 1000
+            ## Repeat for background
+            bkg_arr *= 1000
+            xs = []
+            ys = []
+            indices = []
+            i = 0
+            for x in range(bkg_arr.shape[0]):
+                for y in range(bkg_arr.shape[1]):
+                    for z in range(int(bkg_arr[x][y])):
+                        xs.append(x)
+                        ys.append(y)
+                        indices.append(i)
+                        i += 1
+            nchoices = int(len(indices)*frac)
+            choices = np.random.choice(indices, size=nchoices, replace=False)
+            new_bkg_arr = np.zeros_like(bkg_arr)
+            for choice in choices:
+                new_bkg_arr[xs[choice]][ys[choice]] += 1
+            new_bkg_arr /= 1000
 
         ## Exposure correct image and blanksky image
-        corr_cts = new_arr / (exp_arr/np.mean(exp_arr))
-        corr_bkg_cts = new_bkg_arr / (exp_arr/np.mean(exp_arr))
+        corr_cts = new_arr / (exp_arr/np.median(exp_arr))
+        corr_bkg_cts = new_bkg_arr / (exp_arr/np.median(exp_arr))
+
         fits.writeto(corr_cts_img, corr_cts, hdr, overwrite=True)
         fits.writeto(corr_bkg_cts_img, corr_bkg_cts, bkg_hdr, overwrite=True)
     else:
@@ -143,50 +150,56 @@ def expcorrect(indir,obsids):
             ## Load exposure map
             with fits.open(exp_map) as f:
                 exp_arr = np.array(f[0].data)
+                exp_hdr = f[0].header
 
-            ## Randomly select half of pixels
-            xs = []
-            ys = []
-            indices = []
-            i = 0
-            for x in range(arr.shape[0]):
-                for y in range(arr.shape[1]):
-                    for z in range(arr[x][y]):
-                        xs.append(x)
-                        ys.append(y)
-                        indices.append(i)
-                        i += 1
-            nchoices = int(len(indices)/2)
-            choices = np.random.choice(indices, size=nchoices, replace=False)
-            new_arr = np.zeros_like(arr)
-            for choice in choices:
-                new_arr[xs[choice]][ys[choice]] += 1
+            if frac == 1.0:
+                new_arr = arr
+                new_bkg_arr = bkg_arr
+            else:
+                ## Randomly select half of pixels
+                xs = []
+                ys = []
+                indices = []
+                i = 0
+                for x in range(arr.shape[0]):
+                    for y in range(arr.shape[1]):
+                        for z in range(arr[x][y]):
+                            xs.append(x)
+                            ys.append(y)
+                            indices.append(i)
+                            i += 1
+                nchoices = int(len(indices)*frac)
+                choices = np.random.choice(indices, size=nchoices, replace=False)
+                new_arr = np.zeros_like(arr)
+                for choice in choices:
+                    new_arr[xs[choice]][ys[choice]] += 1
     
-            ## Repeat for background
-            bkg_arr *= 1000
-            xs = []
-            ys = []
-            indices = []
-            i = 0
-            for x in range(bkg_arr.shape[0]):
-                for y in range(bkg_arr.shape[1]):
-                    for z in range(int(bkg_arr[x][y])):
-                        xs.append(x)
-                        ys.append(y)
-                        indices.append(i)
-                        i += 1
-            nchoices = int(len(indices)/2)
-            choices = np.random.choice(indices, size=nchoices, replace=False)
-            new_bkg_arr = np.zeros_like(bkg_arr)
-            for choice in choices:
-                new_bkg_arr[xs[choice]][ys[choice]] += 1
-            new_bkg_arr /= 1000
+                ## Repeat for background
+                bkg_arr *= 1000
+                xs = []
+                ys = []
+                indices = []
+                i = 0
+                for x in range(bkg_arr.shape[0]):
+                    for y in range(bkg_arr.shape[1]):
+                        for z in range(int(bkg_arr[x][y])):
+                            xs.append(x)
+                            ys.append(y)
+                            indices.append(i)
+                            i += 1
+                nchoices = int(len(indices)*frac)
+                choices = np.random.choice(indices, size=nchoices, replace=False)
+                new_bkg_arr = np.zeros_like(bkg_arr)
+                for choice in choices:
+                    new_bkg_arr[xs[choice]][ys[choice]] += 1
+                new_bkg_arr /= 1000
 
             ## Exposure correct image and blanksky image
-            corr_cts_obsid = arr / (exp_arr/np.mean(exp_arr))
-            corr_bkg_obsid = bkg_arr / (exp_arr/np.mean(exp_arr))
+            corr_cts_obsid = new_arr / (exp_arr/np.median(exp_arr))
+            corr_bkg_obsid = new_bkg_arr / (exp_arr/np.median(exp_arr))
             fits.writeto(corr_cts_img_obsid, corr_cts_obsid, hdr, overwrite=True)
             fits.writeto(corr_bkg_img_obsid, corr_bkg_obsid, bkg_hdr, overwrite=True)
+            fits.writeto(outdir + 'avg_exp_map_{}.img'.format(obsid), exp_arr/np.mean(exp_arr), exp_hdr, overwrite=True)
 
             ## Add images for all obsids
             if obsid == obsids[0]:
@@ -245,14 +258,13 @@ def getlimit(indir,obsids,center_x,center_y):
 
     return limit
 
-def bkgrate(indir):
+def bkgrate(indir,center_x,center_y,limit):
     outdir = indir + 'aphot/'
     bkg_img = outdir + 'corrected_bkg_counts.img'
-    bkg_reg_file = outdir + 'bkg.reg'
 
     ## Get counts for blanksky image
     dmstat.punlearn()
-    dmstat.infile = '{}[sky=region({})]'.format(bkg_img,bkg_reg_file)
+    dmstat.infile = '{}[sky=circle({},{},{})]'.format(bkg_img,center_x,center_y,limit)
     dmstat.centroid = 'no'
     dmstat()
 
@@ -260,6 +272,8 @@ def bkgrate(indir):
     total = float(dmstat.out_sum)
     area = float(dmstat.out_good)
     bkgrate = total/area
+    bkgrate = 0
+    print('    Bkgrate: ', bkgrate)
     return bkgrate
 
 def calc(indir,center_x,center_y,R500,bkgrate,limit):
@@ -276,14 +290,16 @@ def calc(indir,center_x,center_y,R500,bkgrate,limit):
         f.write('annulus({},{},{},{},{},{},{})'.format(center_x,center_y,bins[0],bins[1],bins[2],bins[3],bins[4]))
 
     ## Get counts in all angular slices for all bins
+    cluster_counts = []
+    distances = []
     for i in range(len(bins)-1):
-        print('Annulus {}...'.format(i+1))
         inner = bins[i]
         outer = bins[i+1]
-        counts = []
+        print('Annulus: {} to {}'.format(inner,outer))
+        counts_per_angle = []
         total = 0
+        net = 0
         for j in range(len(angles)-1):
-            print('    Angle {}...'.format(j))
             region = 'pie({},{},{},{},{},{})'.format(center_x,center_y,inner,outer,angles[j],angles[j+1])
 
             dmstat.punlearn()
@@ -293,13 +309,49 @@ def calc(indir,center_x,center_y,R500,bkgrate,limit):
 
             area = float(dmstat.out_good)
 
-            total += float(dmstat.out_sum) - bkgrate*area
+            total += float(dmstat.out_sum)
+            net += float(dmstat.out_sum) - bkgrate*area
 
-            counts.append(total)
+            counts_per_angle.append(float(dmstat.out_sum))
+
+        ## Calculate distance, looping through all starting angles
+        straight = np.empty_like(counts_per_angle)
+        min_integral = 10000000
+        for j in range(len(counts_per_angle)):
+            counts_per_angle = np.append(counts_per_angle[1:],counts_per_angle[0])
+            integral = 0
+            cdf = []
+            for k in range(len(straight)):
+                cdf_val = np.sum(counts_per_angle[:k])/total
+                cdf.append(cdf_val)
+                straight[k] = k / len(straight)
+                integral += ((cdf_val - straight[k])**2 * 2 * np.pi / len(straight))
+            min_integral = min(min_integral,integral)
+
+        min_integral *= total
+
+        print('    Min integral: ', min_integral)
+
+        distance = total/net**2 * (min_integral - 1.0/12.0)
 
         fig, ax = plt.subplots()
-        ax.plot(np.array(counts)/total)
-        plt.savefig('{}plot_{}.png'.format(outdir,i))
+        ax.plot(straight * 2 * np.pi / len(straight), cdf)
+        ax.plot(straight * 2 * np.pi / len(straight), straight)
+        plt.savefig('{}plot_{}.png'.format(outdir,i+1))
+        plt.close()
+
+        cluster_counts.append(net)
+        distances.append(distance)
+
+        print('    Distance: ', distance)
+        print('    Counts: ', total)
+        print('    Bkg counts: ', total - net)
+        print('    Net counts: ', net)
+
+    distances = np.array(distances)
+    cluster_counts = np.array(cluster_counts)
+    Aphot = 100 * np.sum(distances*cluster_counts) / np.sum(cluster_counts)
+    return Aphot
 
 #indir = '../results/PSZ2G021.10+33.24/results/'
 #obsids = [6104,7940]
@@ -317,32 +369,89 @@ def calc(indir,center_x,center_y,R500,bkgrate,limit):
 #center_y = 3766
 #N = 1
 
-indir = '../results/PSZ2G024.44+22.76/results/'
-obsids = [26045]
-z = 0.164700
-R500 = 1104.6102507593205
-center_x = 4197.5
-center_y = 4147.4905792183945
-N = 1
+#indir = '../results/PSZ2G024.44+22.76/results/'
+#obsids = [26045]
+#z = 0.164700
+#R500 = 1104.6102507593205
+#center_x = 4197.5
+#center_y = 4147.4905792183945
+#N = 1
+
+## 0
+#indir = '../results/0159+0030/results/'
+#obsids = [5777]
+#z = 0.3856
+#R500 = 837.9526307043083
+#center_x = 4087.5
+#center_y = 3725.865959751341
+#N = 30
+
+## 0.10
+indir = '../results/1222+2709/results/'
+obsids = [5766]
+z = 0.4720
+R500 = 762.2990624071908
+center_x = 3783.5
+center_y = 3909.329876506472
+N = 30
+
+## 0.26
+#indir = '../results/0333−2456/results/'
+#obsids = [5764]
+#z = 0.4751
+#R500 = 737.5635994144291
+#center_x = 3851.5
+#center_y = 4393.070182503307
+#N = 30
+
+## 0.52
+#indir = '../results/0542−4100/results/'
+#obsids = [914]
+#z = 0.6420
+#R500 = 889.8921148221584
+#center_x = 4100
+#center_y = 3950
+#N = 30
+
+## 1.37
+#indir = '../results/0230+1836/results/'
+#obsids = [5754]
+#z = 0.8106
+#R500 = 788.2650382921674
+#center_x = 3737.5
+#center_y = 4330.7
+#N = 30
+
+## 2.90
+#indir = '../results/0152−1358/results/'
+#obsids = [913,21703,22856]
+#z = 0.8325
+#R500 = 813.9091318386161
+#center_x = 4350
+#center_y = 3727
+#N = 30
 
 def runAphot(indir,obsids,z,R500,center_x,center_y,N):
     R500inpixels = getR500inpixels(z,R500)
+    Aphots = []
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        expcorrect(indir,obsids,1.0)
+    limit = getlimit(indir,obsids,center_x,center_y)
+    bkg_rate = bkgrate(indir,center_x,center_y,limit)
+    Aphot = calc(indir,center_x,center_y,R500inpixels,bkg_rate,limit)
+    print('Aphot initially is {}'.format(Aphot))
     for i in range(N):
-        expcorrect(indir,obsids)
+        print('Iteration {}...'.format(i+1))
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            expcorrect(indir,obsids,0.5)
         limit = getlimit(indir,obsids,center_x,center_y)
-        ## Have user create background region
-        if not os.path.exists(indir + 'aphot/bkg.reg'):
-            map_file = indir + 'aphot/corrected_counts.img'
-            sp.call(['bash', 'shell/ds9_cluster.sh', map_file])
-            time.sleep(6)
-            sp.call(['bash', 'shell/ds9_visual_improve.sh'])
-            input('Add a background region then press Enter to continue...')
-            print('------------------------------------------------------------')
-            reg_file = indir + 'aphot/bkg.reg'
-            sp.call(['bash', 'shell/ds9_save_regions.sh', reg_file])
-            time.sleep(3)
-            sp.call('killall ds9', shell=True)        
-        bkg_rate = bkgrate(indir)
-        calc(indir,center_x,center_y,R500inpixels,bkg_rate,limit)
+        bkg_rate = bkgrate(indir,center_x,center_y,limit)
+        aphot = calc(indir,center_x,center_y,R500inpixels,bkg_rate,limit)
+        Aphots.append(aphot)
+        print('    Aphot for iteration {} is {}'.format(i+1,aphot))
+    err = np.std(Aphots)
+    print('Aphot is {} +/- {}'.format(Aphot,err))
 
 runAphot(indir,obsids,z,R500,center_x,center_y,N)
