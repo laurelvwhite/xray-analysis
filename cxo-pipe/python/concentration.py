@@ -1,41 +1,64 @@
 import os
+import numpy as np
 import subprocess as sp
 
 from ciao_contrib.runtool import *
 from cosmocalc import cosmocalc
+from termcolor import colored
 
-clus = 'PSZ2G000.13+78.04'
-z = 0.171000
-R500_kpc = 1150.3347423779778
+def calc_concentration(clus, z, R500):
+    print(colored("Calculating concentration...", "blue", None, ["bold"]))
+    print("------------------------------------------------------------")
 
-res_dir = os.environ['CXO_RES_DIR'] + clus + '/results/'
-conc_dir = res_dir + 'concentration/'
+    base_dir = os.environ['CXO_RES_DIR']
+    res_dir = base_dir + clus + '/results/'
+    conc_dir = res_dir + 'concentration/'
 
-if not os.path.isdir(conc_dir):
-    os.mkdir(conc_dir)
+    if not os.path.isdir(conc_dir):
+        os.mkdir(conc_dir)
 
-cosmo = cosmocalc(z, H0=70, WM=.3)
-DA = cosmo['DA_Mpc']
-R500_arcsec = R500_kpc / 1000 / DA * 360/(2*np.pi) * 3600
-R500 = R500_arcsec / 0.492
+#    with open(base_dir.split('results/')[0] + 'params/param_{}.txt'.format(clus), 'r') as f:
+#        lines = f.readlines()
 
-peak_loc_file = res_dir + 'peak_cent_pos.txt'
+#    for line in lines:
+#        if line.split(' ')[0] == 'z':
+#            z = float(line.split(' ')[2])
+#        elif line.split(' ')[0] == 'R500':
+#            R500_kpc = float(line.split(' ')[2])
 
-with open(peak_loc_file, 'r') as f:
-    lines = f.readlines()
-    line1 = lines[1]
-    line2 = lines[2]
-    peak_x = float(line1.split(' ')[0])
-    peak_y = float(line2.split(' ')[0])
+    cosmo = cosmocalc(z, H0=70, WM=.3)
+    DA = cosmo['DA_Mpc']
+    kpc_to_arcsec = 1.0 / 1000 / DA * 360 / (2 * np.pi) * 3600
+    arcsec_to_pixel = 1.0 / 0.492
+    rad_40_kpc_pix = 40 * kpc_to_arcsec * arcsec_to_pixel
+    rad_400_kpc_pix = 400 * kpc_to_arcsec * arcsec_to_pixel
 
-infile = res_dir + 'efile_repro_raw_clean.fits'
-sp.call(['bash', 'shell/make_images.sh', infile, conc_dir, '0.5:5:1'])
+    peak_loc_file = res_dir + 'peak_cent_pos.txt'
 
-## CHANGE TO 40 AND 400 KPC
-dmstat.punlearn()
-dmstat.infile = '{}[(x,y)=circle({},{},{})]'.format(conc_dir + , peak_x, peak_y, R500)
-dmstat.centroid = 'no'
-dmstat()
+    with open(peak_loc_file, 'r') as f:
+        lines = f.readlines()
+        line1 = lines[1]
+        line2 = lines[2]
+        peak_x = float(line1.split(' ')[0])
+        peak_y = float(line2.split(' ')[0])
 
-flux = float(dmstat.out_sum)
+    infile = res_dir + 'efile_repro_raw_clean.fits'
+
+    dmstat.punlearn()
+    dmstat.infile = '{}[(x,y)=circle({},{},{})]'.format(res_dir + 'wide_broad_flux.img', peak_x, peak_y, rad_40_kpc_pix)
+    dmstat.centroid = 'no'
+    dmstat()
+    inner_flux = float(dmstat.out_sum)
+
+    dmstat.punlearn()
+    dmstat.infile = '{}[(x,y)=circle({},{},{})]'.format(res_dir + 'wide_broad_flux.img', peak_x, peak_y, rad_400_kpc_pix)
+    dmstat.centroid = 'no'
+    dmstat()
+    outer_flux = float(dmstat.out_sum)
+
+    conc = inner_flux / outer_flux
+
+    with open(conc_dir + 'conc.txt', 'w') as f:
+        f.write('{}'.format(conc))
+
 

@@ -1,10 +1,11 @@
-import exp_correct
+import python.exp_correct as exp_correct
 import os
 
 import numpy as np
 
 from ciao_contrib.runtool import *
 from cosmocalc import cosmocalc
+from termcolor import colored
 
 def R500_pixels(z,R500):
     z = float(z)
@@ -21,8 +22,8 @@ def c_smooth(img, img_dir):
     csmooth.punlearn()
     csmooth.infile = img_dir + img
     csmooth.outfile = img_dir + smoothed_img
-    csmooth.sigmin = 2.5
-    csmooth.sigmax = 3.5
+    csmooth.sigmin = 3.0
+    csmooth.sigmax = 4.0
     csmooth.sclmin = 1
     csmooth.sclmax = 200
     csmooth.clobber = 'yes'
@@ -47,13 +48,9 @@ def centroid_shift(res_dir, obsids, z, R500_kpc, frac=1.0):
 
     R500 = R500_pixels(z, R500_kpc)
 
-    print('R500 in pixels is ', R500)
-
     apertures = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1]) * R500
 
-    print('Downsampling and exposure correcting...')
     downsampled_img = exp_correct.expcorrect(res_dir, obsids, frac)
-    print('Smoothing...')
     smoothed_img = c_smooth(downsampled_img, img_dir)
 
     centroid_xs = []
@@ -61,7 +58,6 @@ def centroid_shift(res_dir, obsids, z, R500_kpc, frac=1.0):
 
     i = 1
     for aperture in apertures:
-        print('Doing aperture {}...'.format(i))
         region = 'circle({},{},{})'.format(peak_x, peak_y, aperture)
 
         dmstat.punlearn()
@@ -90,87 +86,29 @@ def centroid_shift(res_dir, obsids, z, R500_kpc, frac=1.0):
 
     return centroid_shift
 
-## 0
-#res_dir = '../results/0159+0030/results/'
-#obsids = [5777]
-#z = 0.3856
-#R500_kpc = 837.9526307043083
+def calc_centroid_shift(clus, z, R500):
+    print(colored("Calculating centroid shift...", "blue", None, ["bold"]))
+    print("------------------------------------------------------------")
 
-## 0.10
-res_dir = '../results/1222+2709/results/'
-obsids = [5766]
-z = 0.4720
-R500_kpc = 762.2990624071908
+    base_dir = os.environ['CXO_RES_DIR']
+    res_dir = base_dir + clus + '/results/'
 
-## 0.26
-#res_dir = '../results/0333−2456/results/'
-#obsids = [5764]
-#z = 0.4751
-#R500_kpc = 737.5635994144291
+    with open(base_dir.split('results/')[0] + 'params/param_{}.txt'.format(clus), 'r') as f:
+        lines = f.readlines()
 
-## 0.52
-#res_dir = '../results/0542−4100/results/'
-#obsids = [914]
-#z = 0.6420
-#R500_kpc = 889.8921148221584
+    for line in lines:
+#        if line.split(' ')[0] == 'z':
+#            z = float(line.split(' ')[2])
+#        elif line.split(' ')[0] == 'R500':
+#            R500_kpc = float(line.split(' ')[2])
+#        elif line.split(' ')[0] == 'obsids':
+        if line.split(' ')[0] == 'obsids':
+            obsid_str = line.split(' ')[2]
 
-## 1.37
-#res_dir = '../results/0230+1836/results/'
-#obsids = [5754]
-#z = 0.8106
-#R500_kpc = 788.2650382921674
+    obsids = obsid_str.split('"')[1].split(',')
 
-## 2.90
-#res_dir = '../results/0152−1358/results/'
-#obsids = [913,21703,22856]
-#z = 0.8325
-#R500_kpc = 813.9091318386161
+    frac = 1.0
+    w = centroid_shift(res_dir, obsids, z, R500, frac)
 
-#res_dir = '../results/PSZ2G000.13+78.04/results/'
-#obsids = [17159]
-#z = 0.171000
-#R500_kpc = 1150.3347423779778
-
-#res_dir = '../results/PSZ2G021.10+33.24/results/'
-#obsids = [6104,7940]
-#z = 0.151400
-#R500_kpc = 1331.756149120992
-
-ws = []
-
-frac = 1.0
-w = centroid_shift(res_dir, obsids, z, R500_kpc, frac)
-ws.append(w)
-print('centroid shift downsampled to {} is {}'.format(frac,w))
-
-frac = 0.75
-w = centroid_shift(res_dir, obsids, z, R500_kpc, frac)
-ws.append(w)
-print('centroid shift downsampled to {} is {}'.format(frac,w))
-
-frac = 0.5
-w = centroid_shift(res_dir, obsids, z, R500_kpc, frac)
-ws.append(w)
-print('centroid shift downsampled to {} is {}'.format(frac,w))
-
-frac = 0.25
-w = centroid_shift(res_dir, obsids, z, R500_kpc, frac)
-ws.append(w)
-print('centroid shift downsampled to {} is {}'.format(frac,w))
-
-frac = 0.1
-w = centroid_shift(res_dir, obsids, z, R500_kpc, frac)
-ws.append(w)
-print('centroid shift downsampled to {} is {}'.format(frac,w))
-
-frac = 0.05
-w = centroid_shift(res_dir, obsids, z, R500_kpc, frac)
-ws.append(w)
-print('centroid shift downsampled to {} is {}'.format(frac,w))
-
-frac = 0.02
-w = centroid_shift(res_dir, obsids, z, R500_kpc, frac)
-ws.append(w)
-print('centroid shift downsampled to {} is {}'.format(frac,w))
-
-print(ws)
+    with open(res_dir + 'centroid/w.txt', 'w') as f:
+        f.write('{}'.format(w))

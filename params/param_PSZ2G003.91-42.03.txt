@@ -1,5 +1,5 @@
 source_name = "PSZ2G003.91-42.03"
-obsids = "observations,were,found,for,ra=316.467,dec=-38.7532"
+obsids = "26042"
 z = 0.152100
 R500 = 1126.4275457498702
 use_peak = True

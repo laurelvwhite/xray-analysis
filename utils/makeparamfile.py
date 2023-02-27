@@ -7,6 +7,8 @@ from ciao_contrib.runtool import *
 parser = argparse.ArgumentParser()
 parser.add_argument('--file', required=True,
                     help='File containing cluster info')
+parser.add_argument('--new', action='store_true',
+                    help='True if new obs')
 args = parser.parse_args()
 file = args.file
 
@@ -38,11 +40,14 @@ for line in lines:
     z = line.split()[3]
     M500 = line.split()[4]
     R500 = M500toR500(z,M500)
-    obsidlist = listobsids(ra,dec)
-    obsids = ''
-    for obsid in obsidlist:
-        obsids += '{},'.format(obsid)
-    obsids = obsids.strip(',')
+    if args.new:
+        obsids = line.split()[5]
+    else:
+        obsidlist = listobsids(ra,dec)
+        obsids = ''
+        for obsid in obsidlist:
+            obsids += '{},'.format(obsid)
+        obsids = obsids.strip(',')
     print('{} has R500 {} and obsids {}'.format(name,R500,obsids))
     with open('../params/param_{}.txt'.format(name), 'w') as f:
         f.write('source_name = "{}"\n'.format(name))

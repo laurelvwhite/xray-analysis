@@ -1,0 +1,21 @@
+source_name = "PSZ2G104.71-54.54"
+obsids = "26059"
+z = 0.244062
+R500 = 1104.241457676681
+use_peak = True
+fixed_coord = None
+fast_annuli = True
+Ysz = [6e-05, 1e-05]
+single_ann_spec = False
+fixed_spec_annuli = False
+fit_kT_profile_directly = True
+file_ACCEPT = None
+compute_Lcool = False
+tcool_th = 7.7
+input_XSZ_file = None
+do_err = True
+tab_obsid = obsids.split(",")
+if len(tab_obsid) > 1:
+    multiobs = True
+else:
+    multiobs = False

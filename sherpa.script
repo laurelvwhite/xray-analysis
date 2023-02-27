@@ -1,0 +1,60 @@
+# run with: execfile("sherpa.script")
+# Read in data
+from sherpa_contrib.profiles import *
+#load_image("0.5-7.0_clipcrop_noneg_thresh.img")
+#load_image("0.7-7.0_clipcropnuc_noneg_thresh.img")
+#load_image("0.7-2.0_clipcrop_noneg_thresh.img")
+load_image("results/PSZ2G067.52+34.75/results/wide_broad_flux.img")
+#image_data()
+
+set_coord("physical")
+set_stat("cash")
+set_method("simplex")
+
+center_x=4160
+center_y=3887
+
+notice2d("circle({},{},100)".format(center_x,center_y))
+image_data()
+
+set_source(beta2d.b1+beta2d.b2)
+b1.xpos=center_x
+b1.ypos=center_y
+b2.xpos=center_x
+b2.ypos=center_y
+b1.r0=10.0
+b2.r0=50.0
+b1.alpha=1.0
+b2.alpha=1.0
+b1.ampl=200.0
+b2.ampl=50.0
+
+b2.theta=b1.theta
+b2.ellip=b1.ellip
+b2.xpos=b1.xpos
+b2.ypos=b1.ypos
+
+#thaw(b1.xpos)
+#thaw(b1.ypos)
+#guess(b1)
+#guess(b2)
+
+#set_source(beta2d.b1)
+#b1.xpos=4354
+#b1.ypos=3897
+#thaw(b1.xpos)
+#thaw(b1.ypos)
+#thaw(b1.ellip)
+#thaw(b1.theta)
+#thaw(b1.alpha)
+#guess(b1)
+
+prof_data(model=b1)
+#log_scale()
+#limits(X_AXIS, 0.1, AUTO)
+fit()
+prof_fit(model=b1,label=False)
+#log_scale()
+#limits(X_AXIS, 0.1, AUTO)
+save_model("bubbles_model.fits",clobber=True)
+save_resid("bubbles_resid.fits",clobber=True)

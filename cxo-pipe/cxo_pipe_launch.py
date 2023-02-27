@@ -8,7 +8,9 @@ import python.cxo_pipe_preproc as prepro
 import python.cxo_pipe_spec as spec
 import python.cxo_pipe_icm as icm
 import python.cxo_pipe_plot as plt
-
+import python.concentration as conc
+import python.centroid as cent
+import python.image as image
 
 from param import *
 
@@ -115,6 +117,10 @@ plt.plot_2D_posteriors(res_dir, N_ann, fit_kT_profile_directly)
 plt.adaptive_map(res_dir, z, R500)
 plt.compute_Aphot(res_dir, z, R500, bkg_area, obsids)
 plt.cluster_id_card(res_dir, source_name, z)
+
+conc.calc_concentration(source_name, z, R500)
+cent.calc_centroid_shift(source_name, z, R500)
+image.make_labeled_image(source_name, z, R500)
 
 sp.call("cp param.py " + res_dir, shell=True)
 
