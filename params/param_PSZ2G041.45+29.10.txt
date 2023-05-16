@@ -1,0 +1,21 @@
+source_name = "PSZ2G041.45+29.10"
+obsids = "26048"
+z = 0.178000
+R500 = 1181.2280099615018
+use_peak = True
+fixed_coord = None
+fast_annuli = True
+Ysz = [6e-05, 1e-05]
+single_ann_spec = False
+fixed_spec_annuli = False
+fit_kT_profile_directly = True
+file_ACCEPT = None
+compute_Lcool = False
+tcool_th = 7.7
+input_XSZ_file = None
+do_err = True
+tab_obsid = obsids.split(",")
+if len(tab_obsid) > 1:
+    multiobs = True
+else:
+    multiobs = False

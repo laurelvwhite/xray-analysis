@@ -1,8 +1,8 @@
 import numpy as np
 import subprocess as sp
 
-#sort = 'concentration'
-sort = 'centroid'
+sort = 'concentration'
+#sort = 'centroid'
 
 clusters = []
 sorted_clusters = []
@@ -38,7 +38,7 @@ for cluster in sorted_clusters:
     command += 'results/{}/results/figures/labeled_no_border.png '.format(cluster)
     clus += 'results/{}/results/figures/cropped_smoothed.img '.format(cluster)
 
-command += '-geometry +0+0 -tile 3x3 sorted_{}.jpg'.format(sort)
+command += '-geometry +0+0 -tile 10x10 sorted_{}.jpg'.format(sort)
 
 print(command)
 #print(clus)

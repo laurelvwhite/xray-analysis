@@ -7,5 +7,3 @@ punlearn specextract
 pset specextract infile=$infile'[sky='$regfile']'
 pset specextract outroot=$outfile
 specextract mode=h binarfwmap=4 bkgresp=no clob+
-
-
