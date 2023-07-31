@@ -7,6 +7,7 @@ punlearn blanksky
 pset blanksky evtfile=$mapfile
 pset blanksky outfile=$outfile
 pset blanksky asolfile=$asolfile
+pset blanksky weight_method=particle-rate
 {
   expect << EOD
   set timeout -1

@@ -48,7 +48,7 @@ icm.best_ne_model(res_dir, Rproj, r_map, los_step_map, z, R500)
 if fit_kT_profile_directly:
     icm.mcmc_kT(res_dir, R500)
     icm.clean_chains(res_dir, 'kT')
-    icm.best_icm_models_kTdirect(res_dir, z, R500, N_ann, Ysz)
+#    icm.best_icm_models_kTdirect(res_dir, z, R500, N_ann, Ysz)
 else:
     if N_ann > 2:
         # Run the MCMC analysis to fit the temperature profile
@@ -56,22 +56,22 @@ else:
         # Clean the chains
         icm.clean_chains(res_dir, "pe")
     # Find the best-fit ICM models
-    icm.best_icm_models(res_dir, z, R500, N_ann, Ysz)
+#    icm.best_icm_models(res_dir, z, R500, N_ann, Ysz)
 # Compute the cooling luminosity if requested
-if compute_Lcool:
-    icm.cooling_lum(
-        res_dir, z, tcool_th, Xdepro, Ydepro, multiobs, obsids, input_XSZ_file, do_err
-    )
+#if compute_Lcool:
+#    icm.cooling_lum(
+#        res_dir, z, tcool_th, Xdepro, Ydepro, multiobs, obsids, input_XSZ_file, do_err
+#    )
 
 print("------------------------------------------------------------")
 print(colored("Analysis figures", "cyan", None, ["bold"]))
 print("------------------------------------------------------------")
 
 # Plot the ICM profiles
-plt.plot_icm_profiles(res_dir, file_ACCEPT, z)
-plt.plot_2D_posteriors(res_dir, N_ann, fit_kT_profile_directly)
+#plt.plot_icm_profiles(res_dir, file_ACCEPT, z)
+#plt.plot_2D_posteriors(res_dir, N_ann, fit_kT_profile_directly)
 plt.adaptive_map(res_dir, z, R500)
-plt.compute_Aphot(res_dir, z, R500, bkg_area, obsids)
+#plt.compute_Aphot(res_dir, z, R500, bkg_area, obsids)
 plt.cluster_id_card(res_dir, source_name, z)
 
 conc.calc_concentration(source_name, z, R500)

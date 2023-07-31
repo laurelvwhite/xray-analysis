@@ -1,5 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import rcParams
+
+rcParams['font.family'] = 'serif'
+rcParams['font.sans-serif'] = ['Times New Roman']
+rcParams['font.size'] = 14
+rcParams['figure.figsize'] = [8, 6]
 
 ## Get lit data
 x = []
@@ -16,7 +22,7 @@ for line in lines:
 clusters = []
 concentrations = []
 
-with open('aas_hist.txt', 'r') as f:
+with open('clusters_to_plot.txt', 'r') as f:
     lines = f.readlines()
 
 for line in lines:
@@ -39,10 +45,8 @@ norm = np.full_like(np.array(concentrations), 1.0/len(clusters))
 print('Moderate cool cores: {}/{}'.format(mod,len(clusters)))
 print('Strong cool cores: {}/{}'.format(strong,len(clusters)))
 
-plt.rcParams.update({'font.size': 12})
-
-plt.plot(x, np.array(y)/47, label='CCCP low-z', color='purple', linewidth=3)
-plt.hist(concentrations, weights=norm, histtype='step', label='CEREAL', color='orange', linewidth=3)
+plt.plot(x, np.array(y)/47, label='CCCP low-z', color='steelblue', linewidth=3)
+plt.hist(concentrations, weights=norm, histtype='step', label='CEREAL', color='lightsteelblue', linewidth=3)
 plt.xlabel(r'c$_{\mathrm{SB}}$')
 plt.ylabel('Fraction')
 plt.xlim(0, 0.4)

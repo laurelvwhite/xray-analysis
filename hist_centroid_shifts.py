@@ -1,5 +1,11 @@
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib import rcParams
+
+rcParams['font.family'] = 'serif'
+rcParams['font.sans-serif'] = ['Times New Roman']
+rcParams['font.size'] = 14
+rcParams['figure.figsize'] = [8, 6]
 
 ## Get lit data
 x = []
@@ -16,7 +22,7 @@ for line in lines:
 clusters = []
 centroids = []
 
-with open('aas_hist.txt', 'r') as f:
+with open('clusters_to_plot.txt', 'r') as f:
     lines = f.readlines()
 
 for line in lines:
@@ -28,10 +34,8 @@ for cluster in clusters:
 
 norm = np.full_like(np.array(centroids), 1.0/len(clusters))
 
-plt.rcParams.update({'font.size': 12})
-
-plt.plot(x, y, label='REXCESS', color='purple', linewidth=3)
-plt.hist(centroids, bins=np.logspace(np.log10(0.001), np.log10(0.1), 10), histtype='step', weights=norm, label='CEREAL', color='orange', linewidth=3)
+plt.plot(x, y, label='REXCESS', color='steelblue', linewidth=3)
+plt.hist(centroids, bins=np.logspace(np.log10(0.001), np.log10(0.1), 10), histtype='step', weights=norm, label='CEREAL', color='lightsteelblue', linewidth=3)
 #plt.xlim(0, 0.1)
 plt.xlabel('Centroid shift')
 plt.ylabel('Fraction')

@@ -227,6 +227,63 @@ def find_spec_annuli(
                     )
                     reg_file_i.close()
 
+            new_inner_rad_tab = []
+            new_outer_rad_tab = []
+            bkg_dominated = False
+            i = 0
+            while bkg_dominated == False:
+                ## Calculate background counts
+                inner_rad = inner_rad_tab[i]
+                outer_rad = outer_rad_tab[i]
+                area = np.pi * (outer_rad - inner_rad)**2
+                bkg_counts = bkg_count_rate * cl_header["exposure"] * area
+
+                ## Calculate signal counts
+                ## Redo calculation in case annuli overwritten by default 6 or 20 annuli
+                counts_file_name_i = mer_dir + f"spec_annulus_counts_{i+1}.txt"
+                reg_file_name_i = (
+                        cl_dir + "spec_annulus_" + str(i+1) + ".reg"
+                    )
+                reg_file_i = open(reg_file_name_i, "w")
+                reg_file_i.write("# Region file format: CIAO version 1.0\n")
+                reg_file_i.write(
+                    "annulus("
+                    + str(Xdepro)
+                    + ","
+                    + str(Ydepro)
+                    + ","
+                    + str(inner_rad)
+                    + ","
+                    + str(outer_rad)
+                    + ")"
+                )
+                reg_file_i.close()
+                sp.call(
+                    [
+                        "bash",
+                        "shell/counts_in_reg.sh",
+                        out_file,
+                        reg_file_name_i,
+                        counts_file_name_i,
+                    ]
+                )
+
+                with open(counts_file_name_i) as f:
+                        content = f.readlines()
+                counts = float(content[5][9:-1])
+
+                if bkg_counts <= counts / 20 or i < 6:
+                    new_inner_rad_tab.append(inner_rad)
+                    new_outer_rad_tab.append(outer_rad)
+                    i += 1
+                    if i == len(inner_rad_tab):
+                        bkg_dominated = True
+                else:
+                    bkg_dominated = True
+
+            inner_rad_tab = new_inner_rad_tab
+            outer_rad_tab = new_outer_rad_tab
+
         reg_file_name = cl_dir + "spec_annuli.reg"
         reg_file = open(reg_file_name, "w")
         reg_file.write("# Region file format: CIAO version 1.0\n")
@@ -304,6 +361,20 @@ def extract_cl_spectra(res_dir, multiobs, obsids):
                         blanksky_file,
                         bkg_region_file,
                         out_file,
+                    ]
+                )
+
+                ## Set the AREASCAL keyword of the blanksky background spectrum files to 1 for background subtraction
+                bkg_spec_file = cl_dir + "cl_spectrum_" + obsid + "_" + str(i) + "_bkg.pi"
+                key = "AREASCAL"
+                value = "1.0"
+                sp.call(
+                    [
+                        "bash",
+                        "shell/edit_header.sh",
+                        bkg_spec_file,
+                        key,
+                        value,
                     ]
                 )
 
@@ -1365,3 +1436,5 @@ def XSB_to_EM_coef(res_dir, obsids, z):
             warnings.simplefilter("ignore")
             fits.writeto(file_save_res, Te_tab, overwrite=True)
             fits.append(file_save_res, norm_tab, overwrite=True)
+
+

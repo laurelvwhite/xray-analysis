@@ -567,7 +567,7 @@ def ln_prior_kT(param, r_test, VPM_param, R500):
         Tmg > 0
         and Tmg < 20
         and contrast > 0
-        # and contrast <= 1
+        and contrast <= 1
         ):
         check_term += 1
 
@@ -930,7 +930,7 @@ def mcmc_ne(res_dir, Rproj, r_map, los_step_map, z, R500):
 
         param_ini = np.asarray([2e-2, 150.0, 0.1, 1.2, 1000.0, 3.0, 1.0])
 
-        ndim, nwalkers, nsteps = param_ini.size, 1500, 250
+        ndim, nwalkers, nsteps = param_ini.size, 400, 250
 
         n0 = np.random.uniform(0.0, 5.0 * param_ini[0], nwalkers)
         rc = np.random.uniform(0.0, 1000.0, nwalkers)
@@ -1036,7 +1036,7 @@ def mcmc_pe(res_dir):
 
         param_ini = np.asarray([8.4e-2, 850.0, 1.0510, 5.4905, 0.3081])
 
-        ndim, nwalkers, nsteps = param_ini.size, 800, 500
+        ndim, nwalkers, nsteps = param_ini.size, 400, 250
 
         P0 = np.random.uniform(0.0, 5.0 * param_ini[0], nwalkers)
         rp = np.random.uniform(0.0, 5000.0, nwalkers)
@@ -1063,7 +1063,7 @@ def mcmc_pe(res_dir):
         min_chi2_chains = np.argsort(chi2_chains[:, -1])
         param_chains = sampler.chain
 
-        ndim, nwalkers, nsteps = param_ini.size, 30, 10000
+        ndim, nwalkers, nsteps = param_ini.size, 15, 10000
         pos = param_chains[min_chi2_chains[0:nwalkers], -1, :].tolist()
         sampler = mcmc_sampler_pe(pos, ndim, nwalkers, nsteps, args_lnprob)
 

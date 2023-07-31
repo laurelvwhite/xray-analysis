@@ -85,7 +85,6 @@ def fit_spec_pyxspec(res_dir, obsids, z):
             SNR_bin = 3
             T_max = 100.0
 
-
             fit_ind = 1
             for obsid in tab_obsid:
                 file_area_bkg = os.path.join(mer_dir,  "bkg_area_" + obsid + ".txt")
@@ -136,12 +135,7 @@ def fit_spec_pyxspec(res_dir, obsids, z):
                 os.remove(f)
 
             AllData.clear()
-#            AllData(' '.join([f'{2*i+1}:{2*i+1} {cl_dir}/cl_spectrum_{obs}_{ind_ann}_grp.pi {2*i+2}:{2*i+2} {bkg_dir}/bkg_spectrum_{obs}_grp.pi' for i, obs in enumerate(tab_obsid)]))
-            AllData(' '.join([f'{i+1}:{i+1} {cl_dir}/cl_spectrum_{obs}_{ind_ann}_grp.pi' for i, obs in enumerate(tab_obsid)]))
-
-            for i in range(1, fit_ind):
-                s = AllData(i)
-                s.background = None
+            AllData(' '.join([f'{i+1}:{i+1} {cl_dir}/cl_spectrum_{obs}_{ind_ann}.pi' for i, obs in enumerate(tab_obsid)]))
 
             AllData.ignore("bad")
             AllData.ignore("**-0.7")
@@ -156,7 +150,6 @@ def fit_spec_pyxspec(res_dir, obsids, z):
             Xset.parallel.walkers  = 8
             Xset.parallel.steppar  = 8
             Xset.parallel.goodness = 8
-            # Xset.parallel.show()
 
             Plot.device = "/null"
             Plot.xAxis = "keV"
@@ -173,7 +166,6 @@ def fit_spec_pyxspec(res_dir, obsids, z):
 
             nH_val = float(np.load(os.path.join(mer_dir, "nH_value.npy")))
 
-#            m = Model('phabs*(apec+bremss)+apec')
             m = Model('phabs*apec')
             m.componentNames
 
@@ -181,14 +173,7 @@ def fit_spec_pyxspec(res_dir, obsids, z):
             m.apec.Redshift = f'{z} -1'
             m.apec.Abundanc = '0.3 -1'
             m.apec.kT = '6.0 0.01 0.01 1 15 20'
-#            m.apec.kT = '5.0 0.01 0.01 1 15 80'
             m.apec.norm = 7e-4
-
-#            m.bremss.kT = '40 -1'
-
-#            m.apec_4.kT = '0.18 -1'
-#            m.apec_4.Abundanc = '1 -1'
-#            m.apec_4.Redshift = '0 -1'
 
             for i in range(1, fit_ind):
                 tab_area_fact = tab_area_cl / tab_area_bkg[i]
